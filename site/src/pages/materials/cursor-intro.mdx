@@ -1,0 +1,1126 @@
+---
+layout: ../../layouts/MaterialLayout.astro
+title: Cursor 2.0 完全学习指南
+description: 深入剖析 Cursor IDE 架构、设计、组件与工作流程 - Rules 和 Agent 实战指南
+category: 工具深度解析
+---
+
+import MetricCard from '../../components/materials/MetricCard';
+import Mermaid from '../../components/materials/Mermaid';
+import ScrollReveal from '../../components/ui/ScrollReveal';
+import CallToAction from '../../components/materials/CallToAction';
+import ExampleCode from '../../components/materials/ExampleCode';
+
+# Cursor 2.0 完全学习指南
+
+**下一代 AI 驱动的代码编辑器全面解析**
+
+> **当前版本**: Cursor 2.0 (2025) | **基础**: VS Code Fork | **核心**: Composer 模型 + Multi-Agent 系统
+
+---
+
+## 🏗️ Cursor 整体架构
+
+### 系统架构全景图
+
+<Mermaid chart={`graph TB
+    subgraph "前端层 - VS Code Fork"
+        VSCode["VS Code 编辑器核心"]
+        UI["AI 增强 UI<br/>Chat/Composer/Agent"]
+        Extensions["扩展系统<br/>完全兼容 VS Code"]
+    end
+
+    subgraph "智能层 - AI 引擎"
+        Router["智能路由器"]
+        Chat["Chat 模式<br/>问答&解释"]
+        Composer["Composer 模式<br/>单次编辑"]
+        Agent["Agent 模式<br/>复杂任务"]
+    end
+
+    subgraph "模型层 - LLM 集成"
+        ModelRouter["模型选择器"]
+        Claude["Claude 3.5 Sonnet<br/>Anthropic"]
+        GPT4["GPT-4o<br/>OpenAI"]
+        O3["O3-mini<br/>OpenAI"]
+        Gemini["Gemini<br/>Google"]
+    end
+
+    subgraph "工具层 - 15+ 专业工具"
+        CodebaseSearch["codebase_search<br/>语义搜索"]
+        FileOps["文件操作<br/>读/写/编辑"]
+        Terminal["终端执行<br/>命令运行"]
+        WebSearch["Web 搜索<br/>文档查找"]
+        Lint["Linter<br/>代码检查"]
+    end
+
+    subgraph "上下文层 - 代码理解"
+        Indexer["代码索引引擎<br/>Embeddings + AST"]
+        Cache["提示词缓存<br/>降低延迟&成本"]
+        Rules["Cursor Rules<br/>项目&用户规则"]
+    end
+
+    subgraph "基础设施层"
+        Azure["Azure GPUs<br/>推理计算"]
+        Terraform["Terraform<br/>基础设施管理"]
+        Backend["后端服务<br/>无源码存储"]
+    end
+
+    VSCode --> UI
+    UI --> Router
+    Router --> Chat
+    Router --> Composer
+    Router --> Agent
+
+    Chat --> ModelRouter
+    Composer --> ModelRouter
+    Agent --> ModelRouter
+
+    ModelRouter --> Claude
+    ModelRouter --> GPT4
+    ModelRouter --> O3
+    ModelRouter --> Gemini
+
+    Agent --> CodebaseSearch
+    Agent --> FileOps
+    Agent --> Terminal
+    Agent --> WebSearch
+    Agent --> Lint
+
+    CodebaseSearch --> Indexer
+    FileOps --> Indexer
+    ModelRouter --> Cache
+    Router --> Rules
+
+    Claude --> Azure
+    GPT4 --> Azure
+    Azure --> Terraform
+    Indexer --> Backend
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class VSCode darkRed
+    class Agent darkPurple
+    class Composer teal
+    class Claude lightGreen
+    class Indexer lightPink
+`} client:load />
+
+---
+
+## 🎨 核心设计理念
+
+### 1. Agent-Centric 设计转变
+
+Cursor 2.0 的最大创新是从 **File-Centric** 转向 **Agent-Centric** 设计：
+
+| 维度         | 传统 IDE (File-Centric) | Cursor 2.0 (Agent-Centric) |
+| ------------ | ----------------------- | -------------------------- |
+| **焦点**     | 文件和代码结构          | 开发目标和意图             |
+| **交互**     | 手动编辑代码            | 自然语言描述需求           |
+| **工作流**   | 逐文件修改              | 跨文件智能协同             |
+| **执行**     | 开发者手动操作          | AI Agents 自动执行         |
+| **思维模式** | "我需要改哪些文件？"    | "我想要什么结果？"         |
+
+### 2. Multi-Agent 并行架构
+
+<Mermaid chart={`sequenceDiagram
+    participant User as 👤 开发者
+    participant Router as 路由器
+    participant A1 as Agent 1<br/>UI 重构
+    participant A2 as Agent 2<br/>API 开发
+    participant A3 as Agent 3<br/>测试编写
+    participant Tools as 工具系统
+    participant Worktree as Git Worktrees
+
+    User->>Router: "重构用户系统并添加测试"
+    Router->>Router: 任务分解
+
+    par 并行执行
+        Router->>A1: 分配 UI 任务
+        Router->>A2: 分配 API 任务
+        Router->>A3: 分配测试任务
+    end
+
+    par 隔离工作
+        A1->>Worktree: 创建 worktree-1
+        A2->>Worktree: 创建 worktree-2
+        A3->>Worktree: 创建 worktree-3
+    end
+
+    par 工具调用
+        A1->>Tools: codebase_search
+        A1->>Tools: file_edit
+        A2->>Tools: codebase_search
+        A2->>Tools: terminal_exec
+        A3->>Tools: file_create
+        A3->>Tools: terminal_exec
+    end
+
+    A1-->>Router: UI 完成
+    A2-->>Router: API 完成
+    A3-->>Router: 测试完成
+
+    Router->>Worktree: 合并所有 worktrees
+    Router->>User: ✅ 任务完成
+`} client:load />
+
+**Multi-Agent 关键特性：**
+- 🔄 **最多 8 个 Agents 并行工作**
+- 🔒 **Git Worktrees 隔离** - 避免冲突
+- 🚀 **远程机器执行** - 分布式计算
+- 🧠 **独立上下文** - 各自维护状态
+
+---
+
+## 🔧 核心组件详解
+
+### Component 1: Composer - 自研 AI 模型
+
+<Mermaid chart={`graph LR
+    subgraph "Composer 模型特性"
+        Speed["4x 速度提升<br/>< 30秒完成"]
+        Context["深度代码理解<br/>语义搜索"]
+        Tools["15+ 工具集成<br/>并行调用"]
+        Reasoning["推理能力<br/>多步骤规划"]
+    end
+
+    subgraph "三种工作模式"
+        Ask["Ask 模式<br/>❓ 问答&解释"]
+        Edit["Edit 模式<br/>✏️ 单次编辑"]
+        AgentMode["Agent 模式<br/>🤖 复杂任务"]
+    end
+
+    Speed --> AgentMode
+    Context --> AgentMode
+    Tools --> AgentMode
+    Reasoning --> AgentMode
+
+    Ask -.提问.-> Answer["回答问题<br/>不修改代码"]
+    Edit -.指令.-> SingleEdit["单文件修改<br/>即时生效"]
+    AgentMode -.目标.-> MultiStep["多文件协同<br/>迭代优化"]
+
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+
+    class Composer teal
+    class AgentMode darkPurple
+`} client:load />
+
+**Composer vs 竞品对比：**
+
+| 特性         | Cursor Composer | GitHub Copilot | Claude Code |
+| ------------ | --------------- | -------------- | ----------- |
+| 平均完成时间 | **< 30秒**      | 60-120秒       | 45-90秒     |
+| 并行工具调用 | ✅ 支持         | ❌ 不支持      | ✅ 支持     |
+| 多文件编辑   | ✅ 原生支持     | ⚠️ 有限      | ✅ 支持     |
+| 自动错误修复 | ✅ 迭代修复     | ❌ 需手动      | ✅ 自动修复 |
+| 代码库理解   | ✅ 语义级别     | ⚠️ 基础      | ✅ 深度理解 |
+
+### Component 2: 代码索引引擎
+
+<Mermaid chart={`flowchart TD
+    Code["📂 代码库"] --> Parser["解析器"]
+
+    subgraph "索引构建"
+        Parser --> AST["AST 树<br/>语法结构"]
+        Parser --> Embed["Embeddings<br/>语义向量"]
+        Parser --> Refs["交叉引用<br/>依赖关系"]
+    end
+
+    subgraph "存储层"
+        AST --> Index["索引数据库"]
+        Embed --> Index
+        Refs --> Index
+    end
+
+    subgraph "查询层"
+        Index --> Semantic["语义搜索<br/>codebase_search"]
+        Index --> Exact["精确搜索<br/>grep_search"]
+        Index --> File["文件查找<br/>file_search"]
+    end
+
+    Semantic --> Agent["AI Agent"]
+    Exact --> Agent
+    File --> Agent
+
+    Agent --> Result["🎯 精确上下文"]
+
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+
+    class Index lightPink
+    class Agent darkPurple
+`} client:load />
+
+**索引引擎工作原理：**
+
+1. **编码器 LLM** 将代码转换为向量表示
+2. **语义理解** 捕获代码的含义而非字面
+3. **实时更新** 文件修改时增量索引
+4. **高效查询** 毫秒级返回相关代码片段
+
+### Component 3: Tab Autocomplete 系统
+
+<Mermaid chart={`sequenceDiagram
+    participant Editor as 编辑器
+    participant Sync as 低延迟同步引擎
+    participant Context as 上下文管理器
+    participant Model as Tab 模型
+    participant Cache as 缓存层
+
+    Editor->>Sync: 代码变更事件
+    Sync->>Context: 收集上下文
+
+    Context->>Context: 计算相关性
+    Note over Context: 平衡：上下文量 vs 速度
+
+    Context->>Model: 发送优化上下文
+    Model->>Cache: 检查缓存
+
+    alt 缓存命中
+        Cache-->>Model: 返回建议
+    else 缓存未命中
+        Model->>Model: 生成预测
+        Model->>Cache: 更新缓存
+    end
+
+    Model-->>Editor: 显示建议 (< 1秒)
+`} client:load />
+
+**Tab 系统优化策略：**
+
+- ⚡ **低延迟目标**: < 1秒显示建议
+- 🎯 **智能上下文**: 只发送最相关的代码
+- 💾 **提示词缓存**: 重用静态部分
+- 🔄 **增量更新**: 最小化传输数据
+
+### Component 4: 工具系统 (15+ 工具)
+
+<Mermaid chart={`mindmap
+    root((Cursor 工具系统))
+        搜索工具
+            codebase_search
+                语义搜索
+                找相似代码
+            grep_search
+                正则匹配
+                精确查找
+            file_search
+                文件名搜索
+                路径过滤
+        文件操作
+            read_file
+                读取内容
+                理解现状
+            write_file
+                创建文件
+                覆盖写入
+            edit_file
+                语义 diff
+                局部修改
+            delete_file
+                删除文件
+                清理冗余
+        执行工具
+            terminal_exec
+                运行命令
+                构建&测试
+            run_script
+                执行脚本
+                自动化任务
+        质量工具
+            lint_check
+                代码检查
+                发现问题
+            format_code
+                格式化
+                统一风格
+        外部工具
+            web_search
+                搜索文档
+                查找示例
+            mcp_servers
+                外部数据
+                API 集成
+`} client:load />
+
+**工具调用策略：**
+
+```typescript
+// Cursor Agent 并行工具调用示例
+const tasks = [
+  { tool: 'codebase_search', query: 'authentication logic' },
+  { tool: 'file_search', pattern: '**/*.test.ts' },
+  { tool: 'grep_search', regex: 'async.*login' }
+];
+
+// 并行执行所有工具
+await Promise.all(tasks.map(t => agent.callTool(t)));
+```
+
+---
+
+## 🔄 工作流程解析
+
+### Workflow 1: Agent 模式完整流程
+
+<Mermaid chart={`flowchart TD
+    Start([👤 用户输入任务]) --> Parse[解析用户意图]
+    Parse --> Plan[生成执行计划]
+
+    Plan --> Multi{任务是否<br/>可分解？}
+
+    Multi -->|是| Decompose[分解为子任务]
+    Multi -->|否| Single[单 Agent 处理]
+
+    Decompose --> Spawn[启动多个 Agents<br/>最多 8 个]
+
+    Spawn --> Parallel[并行执行]
+
+    subgraph "Agent 工作循环"
+        Parallel --> Search[搜索代码库]
+        Search --> Read[读取相关文件]
+        Read --> Reason[推理决策]
+        Reason --> Action{执行动作}
+
+        Action -->|修改| Edit[编辑文件]
+        Action -->|创建| Create[创建文件]
+        Action -->|运行| Exec[执行命令]
+
+        Edit --> Lint[Linter 检查]
+        Create --> Lint
+        Exec --> Output[获取输出]
+
+        Lint --> Check{有错误？}
+        Output --> Check
+
+        Check -->|是| Fix[自动修复]
+        Fix --> Reason
+
+        Check -->|否| Continue{继续任务？}
+        Continue -->|是| Search
+        Continue -->|否| Done[完成]
+    end
+
+    Single --> Search
+
+    Done --> Merge[合并所有 Agents 结果]
+    Merge --> Verify[验证完整性]
+    Verify --> Report[生成报告]
+    Report --> End([✅ 展示结果])
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Start darkRed
+    class Spawn darkPurple
+    class Lint teal
+    class End lightGreen
+`} client:load />
+
+### Workflow 2: 语义 Diff 应用流程
+
+<Mermaid chart={`sequenceDiagram
+    participant Agent as AI Agent
+    participant Analyzer as 代码分析器
+    participant DiffGen as Diff 生成器
+    participant FastModel as 快速应用模型
+    participant Linter as Linter
+
+    Agent->>Analyzer: 分析目标文件
+    Analyzer-->>Agent: 返回代码结构
+
+    Agent->>DiffGen: 生成语义 diff
+    Note over DiffGen: 不生成完整文件<br/>仅生成修改指令
+
+    DiffGen-->>FastModel: 传递 diff + 插入位置
+
+    FastModel->>FastModel: 应用修改
+    FastModel->>FastModel: 修复语法问题
+
+    FastModel->>Linter: 运行 linter
+
+    alt Linter 通过
+        Linter-->>Agent: ✅ 修改成功
+    else Linter 失败
+        Linter-->>FastModel: ⚠️ 错误列表
+        FastModel->>FastModel: 自动修复
+        FastModel->>Linter: 重新检查
+        Note over Linter: 限制循环次数<br/>避免无限修复
+    end
+`} client:load />
+
+**语义 Diff 优势：**
+
+✅ **效率高** - 不生成完整文件，只传输修改部分
+✅ **精确** - 明确指定插入位置和范围
+✅ **自愈** - 二级模型自动修复语法错误
+✅ **快速** - 减少 Token 使用，降低延迟
+
+### Workflow 3: 上下文注入流程
+
+<Mermaid chart={`flowchart LR
+    subgraph "用户输入"
+        Input["💬 提示词"]
+        Files["@file 标注"]
+        Folders["@folder 标注"]
+    end
+
+    subgraph "自动发现"
+        Auto["自动相关性分析"]
+        Embed["Embedding 搜索"]
+        Rank["相关性排序"]
+    end
+
+    subgraph "上下文构建"
+        Collect["收集所有源"]
+        Format["格式化为 XML"]
+        Inject["注入到提示词"]
+    end
+
+    subgraph "最终提示词结构"
+        System["System Prompt"]
+        Context["<attached-files>"]
+        User["User Message"]
+    end
+
+    Input --> Collect
+    Files --> Collect
+    Folders --> Collect
+
+    Input --> Auto
+    Auto --> Embed
+    Embed --> Rank
+    Rank --> Collect
+
+    Collect --> Format
+    Format --> Inject
+
+    Inject --> System
+    Inject --> Context
+    Inject --> User
+
+    System --> LLM["🤖 LLM 处理"]
+    Context --> LLM
+    User --> LLM
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class Inject darkPurple
+    class LLM teal
+`} client:load />
+
+---
+
+## 📜 Cursor Rules 深度指南
+
+### Rules 概述
+
+Cursor Rules 是持久化的、可复用的提示词上下文，用于指导 LLM 的行为。
+
+<Mermaid chart={`graph TB
+    subgraph "Rules 类型"
+        Project["📁 项目规则<br/>.cursor/rules/"]
+        User["👤 用户规则<br/>Cursor Settings"]
+        Legacy["📄 遗留规则<br/>.cursorrules (已弃用)"]
+    end
+
+    subgraph "作用范围"
+        Project --> ProjectScope["项目级别<br/>版本控制"]
+        User --> GlobalScope["全局级别<br/>所有项目"]
+        Legacy --> RootScope["项目根目录<br/>单文件"]
+    end
+
+    subgraph "应用方式"
+        ProjectScope --> PathScope["路径模式匹配"]
+        ProjectScope --> Manual["手动调用"]
+        ProjectScope --> AutoRelevance["自动相关性"]
+
+        GlobalScope --> AlwaysApply["始终应用"]
+    end
+
+    subgraph "优先级"
+        PathScope --> High["高优先级"]
+        Manual --> High
+        AutoRelevance --> Medium["中优先级"]
+        AlwaysApply --> Low["低优先级"]
+    end
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Project darkPurple
+    class User darkRed
+    class High lightGreen
+`} client:load />
+
+### 项目规则配置
+
+**1. 创建项目规则**
+
+```bash
+# 方式 1: 通过命令面板
+Cmd/Ctrl + Shift + P → "Cursor Rules: Add .cursorrules"
+
+# 方式 2: 手动创建
+mkdir -p .cursor/rules
+touch .cursor/rules/code-style.md
+```
+
+**2. 规则文件示例**
+
+```markdown
+<!-- .cursor/rules/typescript-best-practices.md -->
+# TypeScript 最佳实践
+
+## 类型定义
+- 始终显式声明函数返回类型
+- 优先使用 interface 而非 type（除非需要联合类型）
+- 避免使用 any，使用 unknown 代替
+
+## 命名规范
+- 组件使用 PascalCase: `UserProfile`
+- 函数使用 camelCase: `getUserData`
+- 常量使用 UPPER_SNAKE_CASE: `MAX_RETRY_COUNT`
+
+## 代码组织
+- 按功能模块组织文件，非按类型
+  ✅ `features/auth/AuthService.ts`
+  ❌ `services/AuthService.ts`
+
+## 示例代码
+```typescript
+// ✅ 好的实践
+interface User {
+  id: string;
+  name: string;
+}
+
+async function getUser(id: string): Promise<User> {
+  // ...
+}
+
+// ❌ 避免的写法
+function getUser(id: any) {
+  // ...
+}
+```
+```
+
+**3. 路径匹配规则**
+
+```markdown
+<!-- .cursor/rules/api-conventions.md -->
+---
+paths:
+  - "src/api/**/*.ts"
+  - "src/services/**/*.ts"
+---
+
+# API 开发规范
+
+## 错误处理
+所有 API 函数必须使用统一的错误处理：
+
+```typescript
+try {
+  // API 调用
+} catch (error) {
+  logger.error('API call failed', { error, context });
+  throw new ApiError(error);
+}
+```
+
+## 响应格式
+统一返回格式：
+
+```typescript
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+```
+```
+
+### 用户规则配置
+
+**设置路径**: \`Cursor Settings → Rules → User Rules\`
+
+<ExampleCode
+  title="用户全局规则示例"
+  language="markdown"
+  code={`# 我的全局编码偏好
+
+## 通信风格
+- 用简洁的中文回复
+- 代码注释使用英文
+- 直接给出解决方案，少废话
+
+## 代码风格
+- 优先使用函数式编程
+- 避免嵌套超过 3 层
+- 单个函数不超过 50 行
+
+## 工具偏好
+- 使用 pnpm 而非 npm
+- 测试框架使用 Vitest
+- 格式化工具使用 Prettier`}
+  client:load
+/>
+
+### Rules 最佳实践
+
+<Mermaid chart={`mindmap
+    root((Cursor Rules<br/>最佳实践))
+        内容组织
+            ✅ 专注单一主题
+            ✅ 提供具体示例
+            ✅ 包含代码链接
+            ❌ 避免身份声明
+            ❌ 避免负面指令
+        作用域设计
+            项目规则
+                技术栈规范
+                架构模式
+                API 约定
+            用户规则
+                个人偏好
+                通信风格
+                工具选择
+        编写技巧
+            百科全书式
+                描述现状
+                说明变更模式
+            可执行性
+                清晰指令
+                明确示例
+            可维护性
+                版本控制
+                团队共享
+        反模式避免
+            ❌ "你是高级工程师"
+            ❌ "不要删除代码"
+            ❌ 覆盖核心行为
+            ❌ 模糊的指导
+`} client:load />
+
+**好的规则示例：**
+
+```markdown
+✅ 好：React 组件必须使用函数组件 + Hooks。
+   状态管理使用 Zustand，见 src/store/README.md。
+
+   示例：src/components/UserProfile.tsx
+
+❌ 差：你是一个 React 专家，写出最好的组件。
+```
+
+**规则层次结构：**
+
+```
+优先级从高到低：
+1. 路径匹配的项目规则 (最具体)
+2. 手动调用的项目规则
+3. 自动相关性项目规则
+4. 用户全局规则 (最通用)
+```
+
+---
+
+## 🤖 Agent 模式实战指南
+
+### Agent 模式特性对比
+
+| 特性         | Ask 模式  | Edit 模式 | Agent 模式    |
+| ------------ | --------- | --------- | ------------- |
+| **用途**     | 提问&解释 | 单次编辑  | 复杂任务      |
+| **修改代码** | ❌ 不修改 | ✅ 单文件 | ✅ 多文件     |
+| **工具调用** | 基础搜索  | 文件操作  | 15+ 全工具    |
+| **迭代能力** | ❌ 无     | ❌ 无     | ✅ 自动迭代   |
+| **推理能力** | 基础      | 基础      | ✅ 深度推理   |
+| **最大调用** | -         | -         | 25 次工具调用 |
+| **Web 搜索** | ❌        | ❌        | ✅ 自动搜索   |
+| **错误修复** | ❌        | ⚠️ 手动 | ✅ 自动修复   |
+
+### Agent 使用场景
+
+<Mermaid chart={`graph LR
+    subgraph "简单场景 → Ask"
+        Q1["❓ 这段代码做什么？"]
+        Q2["❓ 如何使用这个 API？"]
+        Q3["❓ 为什么会报错？"]
+    end
+
+    subgraph "中等场景 → Edit"
+        E1["✏️ 添加类型注解"]
+        E2["✏️ 重构单个函数"]
+        E3["✏️ 修复 bug"]
+    end
+
+    subgraph "复杂场景 → Agent"
+        A1["🤖 实现新功能"]
+        A2["🤖 重构整个模块"]
+        A3["🤖 迁移技术栈"]
+        A4["🤖 生成测试覆盖"]
+        A5["🤖 性能优化"]
+    end
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+
+    class Q1 darkRed
+    class E1 teal
+    class A1 darkPurple
+`} client:load />
+
+### Agent 实战案例
+
+**案例 1: 添加身份验证系统**
+
+```
+提示词：
+实现完整的 JWT 身份验证系统，包括：
+1. 用户注册和登录 API
+2. JWT token 生成和验证中间件
+3. 受保护路由示例
+4. 完整的单元测试
+
+技术栈：Express.js + TypeScript
+```
+
+**Agent 执行流程：**
+
+<Mermaid chart={`sequenceDiagram
+    participant U as 用户
+    participant A as Agent
+    participant T as 工具系统
+    participant C as 代码库
+
+    U->>A: 提示词：实现 JWT 认证
+
+    A->>T: codebase_search("authentication")
+    T-->>A: 找到现有 auth 相关代码
+
+    A->>T: file_search("**/*config*")
+    T-->>A: 找到配置文件
+
+    A->>T: web_search("Express JWT best practices")
+    T-->>A: 获取最新文档
+
+    A->>A: 生成实现计划
+
+    A->>T: write_file("src/middleware/auth.ts")
+    A->>T: write_file("src/routes/auth.ts")
+    A->>T: write_file("src/utils/jwt.ts")
+    A->>T: write_file("tests/auth.test.ts")
+
+    T-->>C: 创建 4 个文件
+
+    A->>T: terminal_exec("npm test")
+    T-->>A: 测试失败：缺少依赖
+
+    A->>T: terminal_exec("npm install jsonwebtoken bcrypt")
+    T-->>A: 依赖安装完成
+
+    A->>T: terminal_exec("npm test")
+    T-->>A: ✅ 所有测试通过
+
+    A->>T: lint_check()
+    T-->>A: ⚠️ 发现格式问题
+
+    A->>T: edit_file("src/middleware/auth.ts")
+    T-->>C: 修复格式
+
+    A->>T: lint_check()
+    T-->>A: ✅ Linter 通过
+
+    A-->>U: 完成！已实现完整认证系统
+`} client:load />
+
+**案例 2: 重构遗留代码**
+
+```
+提示词：
+将 src/legacy 目录下的代码重构为：
+- 使用 TypeScript 严格模式
+- 应用依赖注入模式
+- 添加完整的 JSDoc 注释
+- 保持现有功能不变
+```
+
+**Agent 策略：**
+
+1. **分析阶段**
+   - 使用 `codebase_search` 理解依赖关系
+   - 使用 `grep_search` 查找所有引用
+
+2. **重构阶段**
+   - 逐个文件应用 TypeScript 类型
+   - 提取接口定义
+   - 实现依赖注入容器
+
+3. **验证阶段**
+   - 运行现有测试确保行为一致
+   - 添加类型检查
+   - 自动修复 linter 问题
+
+### Agent 高级技巧
+
+**技巧 1: 使用 @-Symbols 提供精确上下文**
+
+```
+@src/types/user.ts @src/services/auth.ts
+基于现有的用户类型和认证服务，实现密码重置功能
+```
+
+**技巧 2: 分阶段任务描述**
+
+```
+Phase 1: 创建数据库迁移脚本添加 password_reset_tokens 表
+Phase 2: 实现发送重置邮件的 API 端点
+Phase 3: 实现验证 token 和重置密码的端点
+Phase 4: 添加完整的集成测试
+```
+
+**技巧 3: 指定约束条件**
+
+```
+实现文件上传功能，要求：
+- 最大文件大小：10MB
+- 支持格式：PNG, JPG, PDF
+- 使用 AWS S3 存储
+- 生成带签名的临时 URL
+- 遵循项目现有的错误处理模式 (.cursor/rules/error-handling.md)
+```
+
+**技巧 4: 利用 Web 搜索**
+
+```
+使用最新的 React 19 特性实现一个数据表格组件。
+请搜索 React 19 官方文档确保使用正确的 API。
+```
+
+Agent 会自动：
+1. 搜索 "React 19 data table component"
+2. 查找官方文档
+3. 根据最新 API 实现
+4. 应用最佳实践
+
+### Agent 限制与对策
+
+| 限制                  | 描述                      | 对策                        |
+| --------------------- | ------------------------- | --------------------------- |
+| **25 次工具调用上限** | 复杂任务可能不够          | 点击 "Continue" 继续执行    |
+| **上下文窗口**        | 大型代码库可能超限        | 使用 @-Symbols 精确指定范围 |
+| **无法处理冲突**      | 多 Agent 修改同一文件     | Worktrees 隔离 + 手动合并   |
+| **推理成本**          | Agent 模式消耗更多 tokens | 简单任务使用 Edit 模式      |
+
+---
+
+## 🚀 最佳实践总结
+
+### 开发工作流建议
+
+<Mermaid chart={`flowchart TD
+    Start([新任务]) --> Assess{任务复杂度}
+
+    Assess -->|简单问答| AskMode["使用 Ask 模式<br/>❓ 快速获得答案"]
+    Assess -->|单文件编辑| EditMode["使用 Edit 模式<br/>✏️ 快速修改"]
+    Assess -->|复杂任务| AgentMode["使用 Agent 模式<br/>🤖 全自动执行"]
+
+    AgentMode --> Rules{配置 Rules?}
+    Rules -->|否| SetupRules["设置项目规则<br/>📜 定义规范"]
+    Rules -->|是| Context["准备上下文<br/>@ 标注关键文件"]
+
+    SetupRules --> Context
+
+    Context --> Prompt["撰写清晰提示词<br/>📝 分阶段描述"]
+
+    Prompt --> Execute["执行 Agent"]
+
+    Execute --> Monitor{监控进度}
+
+    Monitor -->|工具调用达上限| Continue["点击 Continue<br/>↻ 继续执行"]
+    Monitor -->|出现错误| Iterate["Agent 自动修复<br/>🔧 迭代优化"]
+    Monitor -->|完成| Review["代码审查<br/>👀 验证质量"]
+
+    Continue --> Execute
+    Iterate --> Execute
+
+    Review --> Test{测试通过?}
+    Test -->|否| Debug["调试修复"]
+    Test -->|是| Done([✅ 完成])
+
+    Debug --> Execute
+
+    AskMode --> Done
+    EditMode --> Done
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class AgentMode darkPurple
+    class Rules teal
+    class Done lightGreen
+`} client:load />
+
+### 性能优化建议
+
+1. **索引优化**
+   ```bash
+   # 排除不必要的目录
+   # .cursorignore 文件
+   node_modules/
+   dist/
+   .next/
+   coverage/
+   *.log
+   ```
+
+2. **提示词缓存**
+   - 保持 Rules 文件稳定
+   - 避免频繁修改系统提示词
+   - 使用静态上下文
+
+3. **并行 Agents**
+   ```
+   ✅ 好：启动多个 Agents 处理独立模块
+   ❌ 差：单个 Agent 顺序处理所有任务
+   ```
+
+### 团队协作建议
+
+```
+.cursor/
+├── rules/
+│   ├── typescript-conventions.md    # TypeScript 规范
+│   ├── react-patterns.md            # React 模式
+│   ├── api-design.md                # API 设计规范
+│   └── testing-strategy.md          # 测试策略
+├── templates/                       # 代码模板
+└── README.md                        # Rules 使用说明
+
+.cursorignore                        # 排除规则
+```
+
+**提交到版本控制：**
+```bash
+git add .cursor/
+git commit -m "docs: add Cursor project rules"
+```
+
+---
+
+## 📚 学习资源
+
+### 官方资源
+
+- 🌐 [Cursor 官网](https://cursor.com/)
+- 📖 [Cursor 文档](https://docs.cursor.com/) (注：部分页面可能 404)
+- 💬 [Cursor 社区论坛](https://forum.cursor.com/)
+- 🐦 [Cursor Twitter](https://twitter.com/cursor_ai)
+
+### 社区资源
+
+- 📄 [Awesome Cursor Rules](https://github.com/PatrickJS/awesome-cursorrules) - 规则配置集合
+- 📝 [Cursor Rules 网站](https://dotcursorrules.com/) - 规则库和示例
+- 🎥 [Cursor 教程视频](https://www.youtube.com/results?search_query=cursor+ai+tutorial)
+
+### 技术深度文章
+
+- [How Cursor (AI IDE) Works](https://blog.sshh.io/p/how-cursor-ai-ide-works) - 技术架构深度解析
+- [Real-world Engineering Challenges: Building Cursor](https://newsletter.pragmaticengineer.com/p/cursor) - 工程挑战
+- [Cursor AI Architecture Deep Dive](https://collabnix.com/cursor-ai-deep-dive-technical-architecture-advanced-features-best-practices-2025/) - 系统架构
+
+---
+
+## 🎯 下一步行动
+
+### 快速开始
+
+1. **安装 Cursor**
+   ```bash
+   # macOS
+   brew install --cask cursor
+
+   # 或从官网下载
+   # https://cursor.com/
+   ```
+
+2. **配置 API Key**
+   ```
+   Settings → Models → 选择你的 LLM 提供商
+   ```
+
+3. **导入 VS Code 设置**
+   ```
+   Settings → Import from VS Code (一键导入)
+   ```
+
+4. **创建第一个 Rule**
+   ```
+   Cmd/Ctrl + Shift + P → "Cursor Rules: Add .cursorrules"
+   ```
+
+5. **尝试 Agent 模式**
+   ```
+   Cmd/Ctrl + I → 切换到 Agent 模式 → 输入任务
+   ```
+
+### 进阶学习路径
+
+<Mermaid chart={`graph LR
+    Beginner[初学者] --> Basic["掌握三种模式<br/>Ask/Edit/Agent"]
+    Basic --> Rules["配置 Rules<br/>项目&用户规则"]
+    Rules --> Advanced["Agent 高级用法<br/>多步骤任务"]
+    Advanced --> Master["自定义工作流<br/>MCP 集成"]
+    Master --> Expert[Cursor 专家]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Beginner darkRed
+    class Expert lightGreen
+`} client:load />
+
+---
+
+## 💡 总结
+
+Cursor 2.0 通过 **Agent-Centric** 设计、**Multi-Agent 并行**、**Composer 模型**和**深度工具集成**，彻底改变了 AI 辅助编程的体验。
+
+**核心优势：**
+- ⚡ **速度**: Composer 模型 4x 速度提升
+- 🧠 **智能**: 15+ 专业工具 + 深度推理
+- 🔄 **自愈**: 自动错误检测和修复
+- 🤝 **协作**: 最多 8 个 Agents 并行工作
+
+**最佳使用场景：**
+- 新功能开发 (Agent)
+- 大规模重构 (Multi-Agent)
+- 快速原型 (Composer)
+- 代码理解 (Chat)
+
+**开始使用 Cursor，让 AI 成为你的超级编程伙伴！** 🚀
+
+---
+
+<CallToAction
+  title="准备好体验未来的编程方式了吗？"
+  subtitle="下载 Cursor，开启你的 AI 编程之旅"
+  client:load
+/>

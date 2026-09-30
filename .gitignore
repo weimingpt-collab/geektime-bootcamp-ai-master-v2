@@ -1,0 +1,30 @@
+.playwright-mcp
+.DS_Store
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.venv/
+node_modules/
+
+# PID files
+.pids.*
+w1/project-alpha/.pids.*
+
+# Test coverage
+coverage.xml
+htmlcov/
+.coverage
+
+# Test databases
+test.db
+*.db
+
+
+.vscode
+.vite

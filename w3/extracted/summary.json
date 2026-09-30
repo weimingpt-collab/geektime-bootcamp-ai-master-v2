@@ -1,0 +1,20 @@
+{
+  "prompt_count": 42,
+  "tool_count": 19,
+  "config_count": 59,
+  "string_count": 1000,
+  "longest_prompt": 10877,
+  "prompt_categories": {
+    "Tool": 25,
+    "Other": 10,
+    "Error": 1,
+    "System": 1,
+    "Instruction": 5
+  },
+  "config_categories": {
+    "API": 2,
+    "Other": 13,
+    "Path": 41,
+    "Model": 3
+  }
+}

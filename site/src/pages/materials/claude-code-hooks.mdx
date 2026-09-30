@@ -1,0 +1,1884 @@
+---
+layout: ../../layouts/MaterialLayout.astro
+title: Claude Code Hooks 完全指南
+description: 深度解析 Claude Code Hooks 机制 - 从基础到高级的自动化工作流配置指南
+category: 工具深度解析
+---
+
+import Mermaid from '../../components/materials/Mermaid';
+import ScrollReveal from '../../components/ui/ScrollReveal';
+import ExampleCode from '../../components/materials/ExampleCode';
+
+# Claude Code Hooks 完全指南
+
+**掌握 Claude Code 自动化工作流的核心机制**
+
+> **核心机制**: 事件驱动的自动化响应 | **配置方式**: JSON + Shell 命令 | **应用场景**: 代码质量、安全防护、工作流自动化
+
+---
+
+## 🎯 什么是 Claude Code Hooks?
+
+Claude Code Hooks 是**在系统生命周期特定时刻自动执行的 Shell 命令**,让你能够验证、修改或阻止工具调用,验证用户输入,以及管理会话生命周期事件。
+
+### 核心价值
+
+<Mermaid chart={`mindmap
+    root((Claude Code<br/>Hooks))
+        自动化工作流
+            代码格式化
+            质量检查
+            依赖管理
+            构建流程
+        安全防护
+            敏感文件保护
+            路径遍历防御
+            输入验证
+            权限控制
+        质量保证
+            代码 Lint
+            类型检查
+            测试运行
+            覆盖率检查
+        开发体验
+            自定义通知
+            日志记录
+            上下文加载
+            状态监控
+`} client:load />
+
+### Hooks vs LLM 决策
+
+<div style={{
+  padding: 'var(--space-8)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+**为什么使用 Hooks 而非依赖 LLM?**
+
+- ⚡ **确定性**: Shell 命令提供可预测的结果,LLM 可能产生不一致的输出
+- 🔒 **安全性**: 通过 exit code 明确控制是否允许操作,无需"希望" LLM 理解
+- 🚀 **性能**: 直接执行 Shell 命令比多轮 LLM 对话快得多
+- 💰 **成本**: 避免额外的 LLM API 调用
+
+> **设计哲学**: "对于需要确定性的任务,使用 Hooks;对于需要智能判断的任务,依赖 LLM"
+
+</div>
+
+---
+
+## 🏗️ Claude Code Hooks 系统架构
+
+### 整体架构图
+
+<Mermaid chart={`graph TB
+    subgraph "事件触发层"
+        PreToolUse["PreToolUse<br/>工具执行前"]
+        PostToolUse["PostToolUse<br/>工具执行后"]
+        UserPromptSubmit["UserPromptSubmit<br/>用户提交提示词"]
+        Notification["Notification<br/>系统通知"]
+        Stop["Stop<br/>代理停止响应"]
+        SubagentStop["SubagentStop<br/>子代理停止"]
+        PreCompact["PreCompact<br/>上下文压缩前"]
+        SessionStart["SessionStart<br/>会话开始"]
+        SessionEnd["SessionEnd<br/>会话结束"]
+    end
+
+    subgraph "Hook 类型"
+        CommandHook["Command Hook<br/>Shell 命令"]
+        PromptHook["Prompt Hook<br/>LLM 查询"]
+    end
+
+    subgraph "Matcher 系统"
+        ToolMatcher["工具匹配器<br/>Edit|Write|Bash"]
+        FileMatcher["文件匹配器<br/>*.ts|*.tsx"]
+        NoMatcher["无匹配器<br/>所有事件"]
+    end
+
+    subgraph "执行引擎"
+        StdinInput["标准输入<br/>JSON 上下文"]
+        ExitCode["退出码<br/>0=成功 2=阻止"]
+        StdoutOutput["标准输出<br/>JSON 响应"]
+    end
+
+    subgraph "应用场景"
+        Formatting["代码格式化"]
+        Linting["代码检查"]
+        Testing["测试运行"]
+        Security["安全防护"]
+    end
+
+    PreToolUse --> ToolMatcher
+    PostToolUse --> ToolMatcher
+    UserPromptSubmit --> NoMatcher
+    Stop --> NoMatcher
+
+    ToolMatcher --> CommandHook
+    FileMatcher --> CommandHook
+    NoMatcher --> PromptHook
+
+    CommandHook --> StdinInput
+    StdinInput --> ExitCode
+    ExitCode --> StdoutOutput
+
+    CommandHook --> Formatting
+    CommandHook --> Linting
+    CommandHook --> Testing
+    CommandHook --> Security
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class PreToolUse darkRed
+    class CommandHook darkPurple
+    class StdinInput teal
+    class Formatting lightGreen
+`} client:load />
+
+---
+
+## 📋 Hook 事件类型详解
+
+### 9 种 Hook 事件
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 1. PreToolUse - 工具执行前
+
+**触发时机**: 在任何工具(Read, Write, Edit, Bash 等)执行之前
+
+**典型用例**:
+- 🔒 阻止编辑敏感文件 (.env, credentials.json)
+- 🛡️ 防止路径遍历攻击
+- ✅ 验证文件路径合法性
+- 📝 记录工具调用日志
+
+**特性**: 可以通过 exit code 2 **阻止**工具执行
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cloud)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 2. PostToolUse - 工具执行后
+
+**触发时机**: 工具成功执行后
+
+**典型用例**:
+- 🎨 自动运行代码格式化工具 (Prettier, Black)
+- 📦 整理导入语句 (organize imports)
+- 🔧 运行 linter (ESLint, Ruff)
+- 📊 生成代码统计
+
+**特性**: **无法阻止**已完成的操作,但可以修改输出或触发后续操作
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-sky)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 3. UserPromptSubmit - 用户提交提示词
+
+**触发时机**: 用户提交消息之前
+
+**典型用例**:
+- 📝 验证用户输入格式
+- 🔍 丰富提示词上下文
+- 🚫 过滤敏感信息
+- 📋 强制包含特定指令
+
+**特性**: 可以修改或阻止用户提示词
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 4. Notification - 系统通知
+
+**触发时机**: Claude 发送通知时
+
+**典型用例**:
+- 🔔 自定义桌面通知
+- 📧 发送邮件/Slack 通知
+- 📱 集成第三方通知服务
+- 🎵 播放声音提示
+
+**特性**: 增强用户体验,提供自定义反馈
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cloud)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 5. Stop - 代理停止响应
+
+**触发时机**: Claude 完成响应并停止之前
+
+**典型用例**:
+- ✅ 运行完整的质量检查套件
+- 🧪 执行测试套件
+- 📦 运行构建流程
+- 📊 生成会话摘要
+
+**特性**: **最重要的 Hook 事件**,用于端到端质量门控
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-sky)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 6. SubagentStop - 子代理停止
+
+**触发时机**: 子代理(Task 工具启动的代理)完成任务之前
+
+**典型用例**:
+- 🎯 验证子任务完成质量
+- 📋 收集子任务执行报告
+- 🔄 决定是否重新执行子任务
+
+**特性**: 支持 Prompt Hook,可以使用 LLM 智能决策
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 7. PreCompact - 上下文压缩前
+
+**触发时机**: Claude 准备压缩对话上下文之前
+
+**典型用例**:
+- 💾 保存重要上下文到文件
+- 📝 生成会话快照
+- 🗃️ 归档关键信息
+
+**特性**: 防止重要信息在上下文压缩中丢失
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cloud)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 8. SessionStart - 会话开始
+
+**触发时机**: 新会话启动或恢复会话时
+
+**典型用例**:
+- 📋 加载项目上下文 (git status, 最近的 issue)
+- 🔧 初始化开发环境
+- 📊 显示项目状态
+- 🎯 设置会话目标
+
+**特性**: 自动化会话初始化流程
+
+</div>
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-sky)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 9. SessionEnd - 会话结束
+
+**触发时机**: 会话即将结束时
+
+**典型用例**:
+- 💾 保存会话状态
+- 📊 生成会话报告
+- 🧹 清理临时文件
+- 📧 发送完成通知
+
+**特性**: 会话清理和总结
+
+</div>
+
+</ScrollReveal>
+
+---
+
+## ⚙️ Hook 类型与配置
+
+### 两种 Hook 类型
+
+<Mermaid chart={`graph TB
+    subgraph "Command Hook - Shell 命令"
+        CMD["直接执行 Shell 命令"]
+        CMDFeatures["• 确定性结果<br/>• 快速执行<br/>• 本地工具集成<br/>• 通过 exit code 控制"]
+        CMDUseCases["用例:<br/>代码格式化<br/>Linting<br/>测试运行<br/>文件保护"]
+    end
+
+    subgraph "Prompt Hook - LLM 查询"
+        PROMPT["查询 LLM 做决策"]
+        PROMPTFeatures["• 智能判断<br/>• 上下文感知<br/>• 灵活决策<br/>• 自然语言响应"]
+        PROMPTUseCases["用例:<br/>复杂验证<br/>智能提示增强<br/>上下文相关决策"]
+    end
+
+    CMD --> CMDFeatures
+    CMDFeatures --> CMDUseCases
+
+    PROMPT --> PROMPTFeatures
+    PROMPTFeatures --> PROMPTUseCases
+
+    Note["当前限制:<br/>Prompt Hook 仅支持<br/>Stop 和 SubagentStop"]
+
+    PROMPT -.-> Note
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+
+    class CMD darkPurple
+    class PROMPT teal
+    class Note lightPink
+`} client:load />
+
+### 配置文件层级
+
+<Mermaid chart={`graph TB
+    subgraph "用户级别配置"
+        UserGlobal["~/.claude/settings.json<br/>全局用户设置"]
+        UserDesc["• 适用于所有项目<br/>• 个人偏好配置<br/>• 不需要提交到 Git"]
+    end
+
+    subgraph "项目级别配置"
+        ProjectShared[".claude/settings.json<br/>共享项目设置"]
+        ProjectLocal[".claude/settings.local.json<br/>本地项目设置"]
+        ProjectDesc["• 团队共享配置<br/>• 应提交到 Git<br/>• 项目特定规则"]
+        LocalDesc["• 个人本地配置<br/>• 不提交到 Git<br/>• 覆盖共享设置"]
+    end
+
+    UserGlobal --> UserDesc
+    ProjectShared --> ProjectDesc
+    ProjectLocal --> LocalDesc
+
+    Priority["优先级:<br/>Local > Project > User"]
+
+    ProjectLocal -.最高优先级.-> Priority
+    ProjectShared -.中等优先级.-> Priority
+    UserGlobal -.最低优先级.-> Priority
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class UserGlobal darkRed
+    class ProjectShared darkPurple
+    class ProjectLocal teal
+`} client:load />
+
+---
+
+## 📝 配置格式与示例
+
+### 基础配置结构
+
+<ExampleCode
+  title="Claude Code Hooks 配置文件结构 - .claude/settings.json"
+  language="json"
+  code={`{
+  "hooks": {
+    "事件名称": [
+      {
+        "matcher": "工具名称或文件模式",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "shell 命令"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+### Matcher 系统详解
+
+<Mermaid chart={`flowchart TD
+    Start{需要 Matcher?} --> CheckEvent[检查事件类型]
+
+    CheckEvent --> ToolEvents{工具相关事件?}
+    CheckEvent --> OtherEvents{其他事件?}
+
+    ToolEvents -->|PreToolUse<br/>PostToolUse| ToolMatcher["使用工具匹配器"]
+    OtherEvents -->|UserPromptSubmit<br/>Notification<br/>Stop| NoMatcher["不使用 Matcher"]
+
+    ToolMatcher --> MatchType{匹配类型}
+
+    MatchType --> ToolName["工具名称匹配<br/>Edit|Write|Bash"]
+    MatchType --> FilePath["文件路径匹配<br/>*.ts|src/**/*.tsx"]
+    MatchType --> Combined["组合匹配<br/>Edit:*.ts"]
+
+    ToolName --> Example1["matcher: 'Edit|Write'<br/>匹配所有编辑/写入操作"]
+    FilePath --> Example2["matcher: '*.env|*.secret'<br/>匹配敏感文件"]
+    Combined --> Example3["matcher: 'Bash:npm install'<br/>匹配特定命令"]
+
+    NoMatcher --> NoExample["直接配置 hooks 数组<br/>无需 matcher 字段"]
+
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+
+    class ToolMatcher teal
+    class Example1 lightGreen
+    class NoMatcher darkPurple
+`} client:load />
+
+---
+
+## 🚀 实战示例
+
+### 示例 1: 自动代码格式化
+
+<ExampleCode
+  title="PostToolUse - 自动运行 Prettier 格式化"
+  language="json"
+  code={`{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+**工作流程:**
+
+<Mermaid chart={`sequenceDiagram
+    participant Claude as Claude Code
+    participant Hook as PostToolUse Hook
+    participant Prettier as Prettier
+
+    Claude->>Claude: 执行 Edit/Write 工具
+    Claude->>Hook: 触发 PostToolUse 事件
+
+    Note over Hook: 匹配 Edit|Write
+
+    Hook->>Hook: 读取 $CLAUDE_FILE_PATHS
+    Hook->>Prettier: prettier --write files
+
+    Prettier->>Prettier: 格式化代码
+    Prettier-->>Hook: exit code 0 (成功)
+
+    Hook-->>Claude: 继续执行
+
+    alt 格式化失败
+        Prettier-->>Hook: exit code 1
+        Hook-->>Claude: 显示错误信息
+    end
+`} client:load />
+
+### 示例 2: 敏感文件保护
+
+<ExampleCode
+  title="PreToolUse - 阻止编辑敏感文件"
+  language="json"
+  code={`{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'for file in $CLAUDE_FILE_PATHS; do case \\"$file\\" in *.env|*.secret|*credentials*) echo \\"❌ 禁止编辑敏感文件: $file\\" >&2; exit 2;; esac; done'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+**安全防护流程:**
+
+<Mermaid chart={`flowchart TD
+    Start([Claude 尝试编辑文件]) --> Hook[PreToolUse Hook 触发]
+    Hook --> Check{检查文件路径}
+
+    Check -->|*.env| Block1[阻止操作]
+    Check -->|*.secret| Block1
+    Check -->|*credentials*| Block1
+    Check -->|安全文件| Allow[允许编辑]
+
+    Block1 --> Exit2[exit code 2]
+    Allow --> Exit0[exit code 0]
+
+    Exit2 --> Error[显示错误:<br/>❌ 禁止编辑敏感文件]
+    Exit0 --> Continue[继续执行编辑]
+
+    Error --> UserNotified[用户收到通知]
+    Continue --> EditComplete[编辑完成]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class Block1 darkRed
+    class Allow lightGreen
+    class Hook teal
+`} client:load />
+
+### 示例 3: Stop Hook - 质量门控
+
+<ExampleCode
+  title="Stop - 端到端质量检查"
+  language="json"
+  code={`{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"🔍 运行质量检查...\\" && npm run lint && npm run type-check && npm test -- --passWithNoTests && echo \\"✅ 所有检查通过!\\"'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+**质量检查流程:**
+
+<Mermaid chart={`sequenceDiagram
+    participant Claude as Claude Code
+    participant Hook as Stop Hook
+    participant Lint as ESLint
+    participant Type as TypeScript
+    participant Test as Jest
+
+    Claude->>Claude: 完成所有操作
+    Claude->>Hook: 触发 Stop 事件
+
+    Hook->>Hook: 🔍 运行质量检查...
+
+    Hook->>Lint: npm run lint
+    Lint-->>Hook: ✅ Linting 通过
+
+    Hook->>Type: npm run type-check
+    Type-->>Hook: ✅ 类型检查通过
+
+    Hook->>Test: npm test
+    Test-->>Hook: ✅ 测试通过
+
+    Hook->>Hook: ✅ 所有检查通过!
+    Hook-->>Claude: exit code 0
+
+    Claude->>Claude: 结束会话
+
+    alt 任一检查失败
+        Lint-->>Hook: ❌ 失败
+        Hook->>Hook: 显示错误详情
+        Hook-->>Claude: exit code 2
+        Claude->>Claude: 提示用户修复
+    end
+`} client:load />
+
+### 示例 4: 自定义通知
+
+<ExampleCode
+  title="Notification - macOS 桌面通知"
+  language="json"
+  code={`{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \\"$CLAUDE_NOTIFICATION_MESSAGE\\" with title \\"Claude Code\\" sound name \\"Glass\\"'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+### 示例 5: SessionStart - 加载上下文
+
+<ExampleCode
+  title="SessionStart - 自动加载项目上下文"
+  language="json"
+  code={`{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"📋 项目状态:\\" && git status -sb && echo \\"\\" && echo \\"📝 最近提交:\\" && git log --oneline -5'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+### 示例 6: 多 Hook 组合
+
+<ExampleCode
+  title="综合配置 - 完整的工作流自动化"
+  language="json"
+  previewLines={15}
+  code={`{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'for file in $CLAUDE_FILE_PATHS; do case \\"$file\\" in *.env|*.secret) echo \\"❌ 禁止编辑: $file\\" >&2; exit 2;; esac; done'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash:rm *",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"⚠️  警告: 尝试删除文件!\\" >&2; exit 2'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write:*.ts|*.tsx",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "eslint --fix \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write:*.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "black \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "ruff --fix \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"🔍 运行质量检查...\\" && npm run lint && npm run type-check && npm test -- --passWithNoTests && echo \\"✅ 检查通过!\\"'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"🚀 会话开始\\" && git status -sb && echo \\"\\n📦 依赖状态:\\" && npm outdated || true'"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"👋 会话结束于 $(date)\\" >> .claude/session.log'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+---
+
+## 🔌 Hook 输入输出协议
+
+### 标准输入 (stdin) - JSON 格式
+
+Hook 通过 stdin 接收 JSON 格式的上下文信息:
+
+<ExampleCode
+  title="Hook 接收的 JSON 输入格式"
+  language="json"
+  code={`{
+  "event": "PostToolUse",
+  "tool": "Edit",
+  "sessionId": "abc123",
+  "workingDirectory": "/Users/you/project",
+  "filePaths": ["/Users/you/project/src/index.ts"],
+  "timestamp": "2025-11-16T10:30:00Z",
+  "metadata": {
+    // 事件特定的元数据
+  }
+}`}
+  client:load
+/>
+
+### 环境变量
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+Hook 可以访问以下环境变量:
+
+- `$CLAUDE_FILE_PATHS` - 受影响文件的路径列表(空格分隔)
+- `$CLAUDE_TOOL_NAME` - 被调用的工具名称
+- `$CLAUDE_SESSION_ID` - 当前会话 ID
+- `$CLAUDE_WORKING_DIR` - 工作目录
+- `$CLAUDE_NOTIFICATION_MESSAGE` - 通知消息内容
+
+</div>
+
+### 退出码 (Exit Code)
+
+<Mermaid chart={`graph TB
+    Hook[Hook 执行] --> Check{检查 Exit Code}
+
+    Check -->|0| Success["✅ 成功<br/>继续执行"]
+    Check -->|1| Warning["⚠️ 警告<br/>记录日志,继续执行"]
+    Check -->|2| Block["🚫 阻止<br/>停止操作,显示错误"]
+    Check -->|其他| Error["❌ 错误<br/>显示错误,继续执行"]
+
+    Success --> Continue[继续工作流]
+    Warning --> Log[记录到日志]
+    Block --> ShowError[向用户显示错误]
+    Error --> ShowError
+
+    Log --> Continue
+    ShowError --> UserAction[等待用户决策]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+
+    class Success lightGreen
+    class Block darkRed
+    class Warning teal
+    class Error lightPink
+`} client:load />
+
+### 标准输出 (stdout) - 高级控制
+
+<ExampleCode
+  title="通过 stdout 返回结构化 JSON"
+  language="json"
+  code={`{
+  "action": "block",
+  "message": "❌ 代码格式化失败: 发现 3 个错误",
+  "details": {
+    "errors": [
+      "src/index.ts:10 - 缺少分号",
+      "src/utils.ts:25 - 行长度超过 100 字符",
+      "src/app.ts:50 - 未使用的导入"
+    ]
+  },
+  "suggestions": [
+    "运行 'npm run format' 修复格式问题",
+    "运行 'npm run lint -- --fix' 自动修复部分问题"
+  ]
+}`}
+  client:load
+/>
+
+---
+
+## 🛡️ 安全最佳实践
+
+<ScrollReveal client:load>
+
+<div style={{
+  padding: 'var(--space-8)',
+  backgroundColor: 'var(--md-cream)',
+  border: '3px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+### ⚠️ 安全警告
+
+**Claude Code hooks 在你的系统上自动执行任意 shell 命令,具有你当前环境的凭据。**
+
+**恶意的 hooks 代码可能:**
+- 📤 泄露你的数据
+- 🗑️ 删除文件
+- 🔓 访问私密信息
+- 💻 执行未授权操作
+
+**防护措施:** 始终在启用 hooks 之前审查实现代码!
+
+</div>
+
+</ScrollReveal>
+
+### 6 大安全检查项
+
+<Mermaid chart={`mindmap
+    root((安全检查清单))
+        1. 引用 Shell 变量
+            使用 "$VAR"
+            不要使用 $VAR
+            防止空格分词
+            防止路径遍历
+        2. 验证输入
+            检查文件路径
+            过滤特殊字符
+            验证命令参数
+            限制操作范围
+        3. 使用绝对路径
+            指定完整路径
+            避免相对路径
+            防止路径注入
+        4. 跳过敏感文件
+            .env 文件
+            .git/ 目录
+            SSH 密钥
+            凭据文件
+        5. 限制权限
+            最小权限原则
+            只读访问优先
+            避免 sudo
+            沙箱执行
+        6. 错误处理
+            捕获异常
+            记录错误
+            安全降级
+            用户通知
+`} client:load />
+
+### 安全配置示例
+
+<ExampleCode
+  title="安全的 Hook 配置模式"
+  language="bash"
+  code={`#!/bin/bash
+# ✅ 安全的 Hook 脚本示例
+
+# 1. 引用所有变量
+for file in $CLAUDE_FILE_PATHS; do
+  # 2. 验证文件路径 - 检查路径遍历
+  if [[ "$file" == *".."* ]]; then
+    echo "❌ 检测到路径遍历攻击: $file" >&2
+    exit 2
+  fi
+
+  # 3. 跳过敏感文件
+  case "$file" in
+    *.env|*.secret|*credentials*|.git/*|~/.ssh/*)
+      echo "❌ 禁止操作敏感文件: $file" >&2
+      exit 2
+      ;;
+  esac
+
+  # 4. 使用绝对路径执行工具
+  /usr/local/bin/prettier --write "$file"
+
+  # 5. 检查命令执行结果
+  if [ $? -ne 0 ]; then
+    echo "⚠️ 格式化失败: $file" >&2
+    # 根据重要性决定是警告(exit 1)还是阻止(exit 2)
+    exit 1
+  fi
+done
+
+# 6. 成功退出
+exit 0`}
+  client:load
+/>
+
+### 常见安全陷阱
+
+<ExampleCode
+  title="❌ 不安全的配置 vs ✅ 安全的配置"
+  language="bash"
+  code={`# ❌ 危险: 未引用变量
+prettier --write $CLAUDE_FILE_PATHS
+# 问题: 如果文件名包含空格,会被分词
+
+# ✅ 安全: 正确引用
+prettier --write "$CLAUDE_FILE_PATHS"
+
+# ❌ 危险: 使用 eval
+eval $CLAUDE_COMMAND
+# 问题: 可能执行任意代码
+
+# ✅ 安全: 白名单验证
+case "$CLAUDE_COMMAND" in
+  "npm test"|"npm run lint") $CLAUDE_COMMAND ;;
+  *) echo "未授权的命令" >&2; exit 2 ;;
+esac
+
+# ❌ 危险: 不检查路径
+rm -rf "$CLAUDE_FILE_PATHS"
+# 问题: 可能删除重要文件
+
+# ✅ 安全: 严格验证
+if [[ "$CLAUDE_FILE_PATHS" =~ ^/tmp/claude/ ]]; then
+  rm -rf "$CLAUDE_FILE_PATHS"
+else
+  echo "只能删除临时文件" >&2
+  exit 2
+fi`}
+  client:load
+/>
+
+---
+
+## 📈 性能优化建议
+
+### Hook 性能影响分析
+
+<Mermaid chart={`graph LR
+    subgraph "快速 Hooks (<100ms)"
+        Fast1["简单验证"]
+        Fast2["文件检查"]
+        Fast3["环境变量读取"]
+    end
+
+    subgraph "中速 Hooks (100ms-1s)"
+        Medium1["代码格式化"]
+        Medium2["轻量 Linting"]
+        Medium3["导入排序"]
+    end
+
+    subgraph "慢速 Hooks (>1s)"
+        Slow1["完整测试套件"]
+        Slow2["类型检查"]
+        Slow3["构建流程"]
+        Slow4["包安装"]
+    end
+
+    Recommend1["PostToolUse:<br/>快速操作"]
+    Recommend2["Stop:<br/>深度检查"]
+
+    Fast1 --> Recommend1
+    Fast2 --> Recommend1
+    Medium1 --> Recommend1
+
+    Slow1 --> Recommend2
+    Slow2 --> Recommend2
+    Slow3 --> Recommend2
+
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+
+    class Fast1 lightGreen
+    class Medium1 teal
+    class Slow1 darkRed
+`} client:load />
+
+### 性能优化建议
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cloud)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 1. PostToolUse Hook - 保持快速
+
+**推荐: < 1 秒**
+
+- ✅ 代码格式化 (Prettier, Black)
+- ✅ 导入排序 (organize imports)
+- ✅ 轻量级 Linting (ESLint --fix)
+
+**避免:**
+- ❌ 完整测试套件
+- ❌ 重型类型检查
+- ❌ 包安装
+
+</div>
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-sky)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+#### 2. Stop Hook - 深度检查
+
+**允许: 几秒到几分钟**
+
+- ✅ 完整 Lint (ESLint, Ruff)
+- ✅ 类型检查 (TypeScript, mypy)
+- ✅ 测试运行 (Jest, pytest)
+- ✅ 构建验证 (npm run build)
+
+**优化技巧:**
+- 使用缓存加速重复检查
+- 并行运行独立检查
+- 提供进度反馈
+
+</div>
+
+### 性能优化示例
+
+<ExampleCode
+  title="优化的 Stop Hook - 并行执行 + 缓存"
+  language="json"
+  code={`{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"🔍 运行质量检查...\\" && (npm run lint & npm run type-check & npm test -- --cache & wait) && echo \\"✅ 所有检查通过!\\"'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+---
+
+## 🎓 高级技巧与模式
+
+### 技巧 1: 条件执行
+
+<ExampleCode
+  title="基于环境的条件 Hook"
+  language="bash"
+  code={`#!/bin/bash
+# 只在 CI 环境运行完整检查
+
+if [ "$CI" = "true" ]; then
+  echo "🤖 CI 环境 - 运行完整检查"
+  npm run lint && npm run type-check && npm test
+else
+  echo "💻 本地开发 - 运行快速检查"
+  npm run lint -- --max-warnings 0
+fi`}
+  client:load
+/>
+
+### 技巧 2: 增量检查
+
+<ExampleCode
+  title="只检查修改的文件"
+  language="bash"
+  code={`#!/bin/bash
+# 增量 Linting - 只检查修改的文件
+
+if [ -n "$CLAUDE_FILE_PATHS" ]; then
+  echo "🔍 检查修改的文件..."
+  eslint $CLAUDE_FILE_PATHS
+else
+  echo "📋 没有文件需要检查"
+  exit 0
+fi`}
+  client:load
+/>
+
+### 技巧 3: 自定义日志
+
+<ExampleCode
+  title="结构化日志记录"
+  language="bash"
+  code={`#!/bin/bash
+# 记录所有 Hook 执行到日志文件
+
+LOG_FILE=".claude/hooks.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# 记录 Hook 信息
+echo "[$TIMESTAMP] Event: $CLAUDE_EVENT, Tool: $CLAUDE_TOOL_NAME" >> "$LOG_FILE"
+echo "[$TIMESTAMP] Files: $CLAUDE_FILE_PATHS" >> "$LOG_FILE"
+
+# 执行实际操作
+prettier --write "$CLAUDE_FILE_PATHS"
+RESULT=$?
+
+# 记录结果
+if [ $RESULT -eq 0 ]; then
+  echo "[$TIMESTAMP] Status: ✅ Success" >> "$LOG_FILE"
+else
+  echo "[$TIMESTAMP] Status: ❌ Failed (exit $RESULT)" >> "$LOG_FILE"
+fi
+
+exit $RESULT`}
+  client:load
+/>
+
+### 技巧 4: 交互式确认
+
+<ExampleCode
+  title="敏感操作需要用户确认"
+  language="bash"
+  code={`#!/bin/bash
+# 删除文件前要求确认
+
+if [[ "$CLAUDE_TOOL_NAME" == "Bash" && "$CLAUDE_COMMAND" == *"rm"* ]]; then
+  echo "⚠️  检测到删除操作: $CLAUDE_COMMAND"
+  read -p "确认执行? (y/N): " confirm
+
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "❌ 操作已取消"
+    exit 2
+  fi
+fi
+
+exit 0`}
+  client:load
+/>
+
+### 技巧 5: Hook 链
+
+<ExampleCode
+  title="多个 Hook 顺序执行"
+  language="json"
+  code={`{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write:*.ts|*.tsx",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "eslint --fix \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"✅ 格式化和 Lint 完成: $CLAUDE_FILE_PATHS\\"'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+---
+
+## 🔧 调试 Hooks
+
+### 调试工作流
+
+<Mermaid chart={`flowchart TD
+    Start([Hook 未按预期工作]) --> Enable[启用调试模式]
+
+    Enable --> Check1{检查配置}
+    Check1 -->|配置错误| Fix1[修复 JSON 语法]
+    Check1 -->|配置正确| Check2{检查 Matcher}
+
+    Fix1 --> Test
+
+    Check2 -->|不匹配| Fix2[调整 Matcher 模式]
+    Check2 -->|匹配正确| Check3{检查命令}
+
+    Fix2 --> Test
+
+    Check3 -->|命令错误| Fix3[修正 Shell 命令]
+    Check3 -->|命令正确| Check4{检查权限}
+
+    Fix3 --> Test
+
+    Check4 -->|权限不足| Fix4[调整文件权限]
+    Check4 -->|权限正确| Check5{检查环境变量}
+
+    Fix4 --> Test
+
+    Check5 -->|变量未设置| Fix5[添加环境变量]
+    Check5 -->|变量正确| Advanced[高级调试]
+
+    Fix5 --> Test
+
+    Test[测试 Hook] --> Works{是否工作?}
+    Works -->|是| Success[✅ 调试成功]
+    Works -->|否| Logs[查看日志]
+
+    Advanced --> Logs
+    Logs --> Analyze[分析错误信息]
+    Analyze --> Iterate[迭代修复]
+    Iterate --> Test
+
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+
+    class Success lightGreen
+    class Start darkRed
+`} client:load />
+
+### 调试技巧
+
+<ExampleCode
+  title="添加详细日志的调试 Hook"
+  language="bash"
+  code={`#!/bin/bash
+# 调试模式 - 输出所有环境信息
+
+DEBUG=true
+
+if [ "$DEBUG" = "true" ]; then
+  echo "===== Hook 调试信息 =====" >&2
+  echo "Event: $CLAUDE_EVENT" >&2
+  echo "Tool: $CLAUDE_TOOL_NAME" >&2
+  echo "Files: $CLAUDE_FILE_PATHS" >&2
+  echo "Working Dir: $CLAUDE_WORKING_DIR" >&2
+  echo "Session: $CLAUDE_SESSION_ID" >&2
+  echo "=========================" >&2
+fi
+
+# 执行实际命令
+prettier --write "$CLAUDE_FILE_PATHS" 2>&1 | tee -a .claude/prettier.log
+
+# 记录退出码
+EXIT_CODE=$?
+
+if [ "$DEBUG" = "true" ]; then
+  echo "Exit Code: $EXIT_CODE" >&2
+fi
+
+exit $EXIT_CODE`}
+  client:load
+/>
+
+### 常见问题排查
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+**问题 1: Hook 没有触发**
+
+- ✅ 检查 Matcher 是否正确匹配工具/文件
+- ✅ 确认配置文件位置正确
+- ✅ 验证 JSON 语法无误
+- ✅ 重启 Claude Code
+
+**问题 2: Hook 执行失败**
+
+- ✅ 检查 Shell 命令是否正确
+- ✅ 验证文件路径是否存在
+- ✅ 确认工具已安装 (prettier, eslint 等)
+- ✅ 检查文件权限
+
+**问题 3: Hook 运行太慢**
+
+- ✅ 将重型检查移到 Stop Hook
+- ✅ 使用增量检查
+- ✅ 启用工具缓存
+- ✅ 并行执行独立操作
+
+**问题 4: Hook 阻止了合法操作**
+
+- ✅ 调整 Matcher 范围
+- ✅ 添加例外规则
+- ✅ 改用 exit 1 (警告)而非 exit 2 (阻止)
+- ✅ 提供更明确的错误信息
+
+</div>
+
+---
+
+## 📚 真实案例研究
+
+### 案例 1: TypeScript 项目自动化
+
+<ExampleCode
+  title="完整的 TypeScript 项目 Hooks 配置"
+  language="json"
+  previewLines={20}
+  code={`{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'for file in $CLAUDE_FILE_PATHS; do case \\"$file\\" in *.env*|*.secret*|package-lock.json) echo \\"❌ 禁止编辑: $file\\" >&2; exit 2;; esac; done'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write:*.ts|*.tsx",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "eslint --fix \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write:package.json",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm install"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"🔍 质量检查...\\" && npm run type-check && npm run lint && npm test -- --passWithNoTests && echo \\"✅ 通过!\\"'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \\"📦 TypeScript $(tsc --version)\\" && echo \\"📊 Git 状态:\\" && git status -sb'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+### 案例 2: Python 项目自动化
+
+<ExampleCode
+  title="Python 项目的 Hooks 配置"
+  language="json"
+  code={`{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write:*.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "black \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "isort \\"$CLAUDE_FILE_PATHS\\""
+          },
+          {
+            "type": "command",
+            "command": "ruff --fix \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write:requirements.txt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pip install -r requirements.txt"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'mypy . && pytest --cov=. --cov-report=term-missing'"
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+### 案例 3: 多语言项目
+
+<ExampleCode
+  title="支持多种语言的通用配置"
+  language="json"
+  previewLines={15}
+  code={`{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write:*.ts|*.tsx|*.js|*.jsx",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write:*.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "black \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write:*.go",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gofmt -w \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write:*.rs",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "rustfmt \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+---
+
+## 🚀 最佳实践总结
+
+### 12 条黄金法则
+
+<Mermaid chart={`mindmap
+    root((12条黄金法则))
+        1-3 基础配置
+            1. 从简单开始
+                先配置格式化
+                再添加检查
+                逐步完善
+            2. 使用正确层级
+                团队共享-项目级
+                个人偏好-用户级
+                临时测试-本地级
+            3. 版本控制
+                提交项目配置
+                忽略本地配置
+                文档化变更
+        4-6 性能优化
+            4. 快速反馈
+                PostToolUse<1s
+                避免重型操作
+                提供进度提示
+            5. 合理分配
+                格式化-PostToolUse
+                测试-Stop
+                上下文-SessionStart
+            6. 并行执行
+                独立任务并行
+                使用后台作业
+                利用工具缓存
+        7-9 安全防护
+            7. 引用变量
+                "$VAR" 非 $VAR
+                防止分词
+                防止注入
+            8. 验证输入
+                检查路径
+                过滤特殊字符
+                白名单机制
+            9. 保护敏感数据
+                .env文件
+                密钥文件
+                凭据文件
+        10-12 维护与调试
+            10. 明确错误信息
+                描述问题
+                提供建议
+                指出位置
+            11. 日志记录
+                记录关键事件
+                便于排查问题
+                监控性能
+            12. 持续优化
+                收集反馈
+                分析性能
+                迭代改进
+`} client:load />
+
+### Dos ✅ & Don'ts ❌
+
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 'var(--space-4)',
+  marginBottom: 'var(--space-8)'
+}}>
+  <div style={{
+    padding: 'var(--space-6)',
+    backgroundColor: 'var(--md-cloud)',
+    border: '2px solid var(--md-graphite)'
+  }}>
+    <h4>✅ 推荐做法</h4>
+    <ol>
+      <li>总是引用 Shell 变量</li>
+      <li>使用绝对路径执行工具</li>
+      <li>保持 PostToolUse Hook 快速</li>
+      <li>在 Stop Hook 做深度检查</li>
+      <li>提供清晰的错误信息</li>
+      <li>记录关键操作到日志</li>
+      <li>验证所有文件路径</li>
+      <li>使用 exit code 2 阻止危险操作</li>
+      <li>测试 Hook 的所有分支</li>
+      <li>文档化 Hook 配置</li>
+    </ol>
+  </div>
+
+  <div style={{
+    padding: 'var(--space-6)',
+    backgroundColor: 'var(--md-cream)',
+    border: '2px solid var(--md-graphite)'
+  }}>
+    <h4>❌ 避免做法</h4>
+    <ol>
+      <li>未引用的 Shell 变量</li>
+      <li>在 PostToolUse 运行重型测试</li>
+      <li>使用 eval 执行动态命令</li>
+      <li>忽略退出码</li>
+      <li>不验证文件路径</li>
+      <li>直接操作敏感文件</li>
+      <li>过于复杂的 Hook 逻辑</li>
+      <li>没有错误处理</li>
+      <li>阻塞式的用户交互</li>
+      <li>忽略性能影响</li>
+    </ol>
+  </div>
+</div>
+
+---
+
+## 📖 学习资源
+
+### 官方文档
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+- 🌐 [Hooks Reference - Claude Code Docs](https://code.claude.com/docs/en/hooks)
+- 📖 [Hooks Guide - Practical Examples](https://code.claude.com/docs/en/hooks-guide)
+- 🔧 [Settings Reference](https://code.claude.com/docs/en/settings)
+- 🛡️ [IAM - Permission Control](https://code.claude.com/docs/en/iam)
+
+</div>
+
+### 社区资源
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-sky)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+- 📝 [Complete Guide to Hooks - eesel AI](https://www.eesel.ai/blog/hooks-in-claude-code)
+- 🎯 [Automate Workflows with Hooks - GitButler](https://blog.gitbutler.com/automate-your-ai-workflows-with-claude-code-hooks)
+- 💡 [Use Hooks to Enforce Quality Gates - Medium](https://jpcaparas.medium.com/claude-code-use-hooks-to-enforce-end-of-turn-quality-gates-5bed84e89a0d)
+- 🚀 [Fully Automate Workflow - Medium](https://medium.com/@joe.njenga/use-claude-code-hooks-newest-feature-to-fully-automate-your-workflow-341b9400cfbe)
+
+</div>
+
+### 技术博客
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cloud)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+- 🏆 [Claude Code Best Practices - Anthropic](https://www.anthropic.com/engineering/claude-code-best-practices)
+- 🔨 [How I Use Claude Code - Builder.io](https://www.builder.io/blog/claude-code)
+- 📚 [What is Claude Code Hooks - Apidog](https://apidog.com/blog/claude-code-hooks/)
+
+</div>
+
+---
+
+## 🎯 快速开始指南
+
+### 5 分钟上手
+
+<Mermaid chart={`sequenceDiagram
+    participant You as 你
+    participant Claude as Claude Code
+    participant Config as .claude/settings.json
+    participant Hook as Hook Script
+
+    You->>Claude: 1. 运行 /hooks 命令
+    Claude->>You: 显示交互式配置界面
+
+    You->>Claude: 2. 选择事件类型
+    Note over You,Claude: PostToolUse → Edit|Write
+
+    You->>Claude: 3. 输入命令
+    Note over You,Claude: prettier --write "$CLAUDE_FILE_PATHS"
+
+    Claude->>Config: 4. 生成配置文件
+    Config-->>You: 配置已保存
+
+    You->>Claude: 5. 编辑一个文件
+    Claude->>Hook: 触发 PostToolUse
+    Hook->>Hook: 运行 Prettier
+    Hook-->>Claude: 格式化完成
+    Claude-->>You: ✅ 文件已格式化
+`} client:load />
+
+### 手动配置步骤
+
+1. **创建配置目录**
+   ```bash
+   mkdir -p .claude
+   ```
+
+2. **创建配置文件**
+   ```bash
+   touch .claude/settings.json
+   ```
+
+3. **添加基础配置**
+
+<ExampleCode
+  title="最小配置示例"
+  language="json"
+  code={`{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write \\"$CLAUDE_FILE_PATHS\\""
+          }
+        ]
+      }
+    ]
+  }
+}`}
+  client:load
+/>
+
+4. **测试配置**
+   - 编辑一个文件
+   - 观察 Prettier 是否自动运行
+   - 检查文件是否被格式化
+
+5. **逐步扩展**
+   - 添加更多 Hook 事件
+   - 增加质量检查
+   - 配置团队规范
+
+---
+
+## 💡 总结
+
+Claude Code Hooks 是**自动化开发工作流的强大机制**:
+
+**核心优势:**
+- 🎯 **确定性** - Shell 命令提供可预测的结果
+- 🔒 **安全性** - 通过 exit code 明确控制操作
+- ⚡ **性能** - 直接执行,无需 LLM 调用
+- 🔧 **灵活性** - 9 种事件类型覆盖完整生命周期
+
+**9 种 Hook 事件:**
+1. **PreToolUse** - 工具执行前(可阻止)
+2. **PostToolUse** - 工具执行后(自动化)
+3. **UserPromptSubmit** - 提示词提交前
+4. **Notification** - 自定义通知
+5. **Stop** - 端到端质量门控
+6. **SubagentStop** - 子代理停止
+7. **PreCompact** - 上下文压缩前
+8. **SessionStart** - 会话开始
+9. **SessionEnd** - 会话结束
+
+**两种 Hook 类型:**
+- **Command Hook** - Shell 命令(快速、确定)
+- **Prompt Hook** - LLM 查询(智能、灵活)
+
+**三个配置层级:**
+- **用户级** - ~/.claude/settings.json
+- **项目级** - .claude/settings.json
+- **本地级** - .claude/settings.local.json
+
+**最佳实践:**
+- 始终引用 Shell 变量
+- PostToolUse 保持快速(< 1s)
+- Stop Hook 做深度检查
+- 验证所有输入路径
+- 提供清晰的错误信息
+
+**开始使用 Claude Code Hooks,自动化你的开发工作流!** 🚀
+
+---
+
+## 相关资源
+
+<div style={{
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-6)'
+}}>
+
+- [Claude Code 系统提示词完整解析](/materials/claude-code-system-prompts) - 43 个系统提示词详解
+- [Claude Code 2.0 深度架构分析](/materials/claude-code-architecture) - 完整架构分析
+- [Claude Code 介绍](/materials/claude-code-intro) - 快速入门指南
+- [Claude Code 设置指南](/materials/claude-code-setup) - 安装和配置
+
+</div>
+
+---
+
+<div style={{
+  textAlign: 'center',
+  marginTop: '3rem',
+  padding: '2rem',
+  background: 'linear-gradient(135deg, #772d8b 0%, #77a0a9 100%)',
+  borderRadius: '1rem'
+}}>
+  <p style={{ color: 'white', fontSize: '1.2rem', margin: 0 }}>
+    ✨ <strong>准备好自动化你的开发工作流了吗?</strong> ✨
+  </p>
+  <p style={{ color: 'rgba(255,255,255,0.9)', margin: '1rem 0 0 0' }}>
+    配置第一个 Claude Code Hook,开启高效自动化之旅
+  </p>
+</div>

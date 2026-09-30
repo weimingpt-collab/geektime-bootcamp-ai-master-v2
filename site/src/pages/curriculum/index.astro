@@ -1,0 +1,90 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import PageHeader from "../../components/ui/PageHeader";
+import Timeline from "../../components/course/Timeline";
+import AnimatedDiagram from "../../components/diagrams/AnimatedDiagram";
+import { getTimelineData } from "../../data/curriculum";
+import { getUrl } from "../../utils/url";
+
+const timelineData = getTimelineData();
+
+const learningPathDiagram = `graph TB
+    A[第1周: AI编码新范式] --> B[第2周: 深入Cursor]
+    A --> C[第3周: 深入Claude Code]
+    B --> D[第4周: 代码库理解]
+    C --> D
+    D --> E[第5周: 深入MCP]
+    E --> F[第6周: Agent核心]
+    F --> G[第7周: 全流程实践]
+    G --> H[第8周: 回顾展望]
+
+    style A fill:#0071e3,color:#fff
+    style B fill:#bf5af2,color:#fff
+    style C fill:#bf5af2,color:#fff
+    style D fill:#ff9500,color:#fff
+    style E fill:#ff2d55,color:#fff
+    style F fill:#34c759,color:#fff
+    style G fill:#0071e3,color:#fff
+    style H fill:#86868b,color:#fff`;
+---
+
+<PageLayout
+  title="课程大纲 - 陈天 AI 训练营"
+  description="8周系统化学习，从 AI 编码入门到 Agent 开发精通"
+>
+  <PageHeader
+    title="8周学习路径"
+    subtitle="从入门到精通，系统掌握 AI 辅助编程"
+    client:load
+  >
+    <div class="md-cta-stack justify-center">
+      <a href="#timeline" class="md-btn"> 查看课程大纲 </a>
+      <a href={getUrl("projects")} class="md-btn md-btn-secondary">
+        实战项目
+      </a>
+    </div>
+  </PageHeader>
+
+  <section
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <h2 class="text-h2 font-bold text-center text-ink mb-10">学习路径图</h2>
+      <p
+        class="text-center max-w-2xl mx-auto text-body text-slate mb-12"
+        style="line-height: 1.6;"
+      >
+        循序渐进的课程设计，每周一个主题，逐步深入 AI 辅助编程的核心技能
+      </p>
+      <AnimatedDiagram code={learningPathDiagram} client:load />
+    </div>
+  </section>
+
+  <section
+    id="timeline"
+    class="md-section"
+    style="background-color: var(--md-soft-blue); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <h2 class="text-h2 font-bold text-center text-ink mb-12">课程时间线</h2>
+      <Timeline items={timelineData} client:load />
+    </div>
+  </section>
+
+  <section
+    class="md-section"
+    style="background-color: var(--md-sunbeam); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container text-center">
+      <h2 class="text-h2 font-bold text-ink mb-10">准备好开始学习了吗？</h2>
+      <p
+        class="text-h3 max-w-2xl mx-auto text-body text-ink mb-10"
+        style="line-height: 1.5;"
+      >
+        点击任意周次，查看详细的学习内容和实践项目
+      </p>
+      <a href={getUrl("curriculum/week-1")} class="md-btn"> 开始第一周课程 </a>
+    </div>
+  </section>
+</PageLayout>

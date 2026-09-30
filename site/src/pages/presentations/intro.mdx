@@ -1,0 +1,48 @@
+---
+layout: ../../layouts/PresentationLayout.astro
+title: AI 编程训练营介绍
+description: 陈天 AI 编程训练营课程介绍与概览
+category: 课程介绍
+---
+
+import PresentationCarousel from '../../components/presentations/PresentationCarousel';
+import { getUrl } from '../../utils/url';
+
+# AI 编程训练营介绍
+
+欢迎来到陈天 AI 编程训练营！本演示文稿将带你了解课程的整体框架与学习路径。
+
+<PresentationCarousel
+  client:load
+  title="AI 编程训练营介绍"
+  slides={[
+    {
+      image: "/slides/intro/intro-1.jpg",
+      alt: "课程介绍 - 第一部分",
+      caption: "AI 编程训练营 - 课程概览"
+    },
+    {
+      image: "/slides/intro/intro-2.jpg",
+      alt: "课程介绍 - 第二部分",
+      caption: "课程内容与学习目标"
+    },
+    {
+      image: "/slides/intro/intro-3.jpg",
+      alt: "课程介绍 - 第三部分",
+      caption: "学习路径与资源"
+    },
+    {
+      image: "/slides/intro/intro-4.jpg",
+      alt: "课程介绍 - 第四部分",
+      caption: "开始你的 AI 编程之旅"
+    }
+  ]}
+/>
+
+## 开始学习
+
+准备好开始你的 AI 编程之旅了吗？
+
+- [查看课程大纲](/curriculum) - 了解 8 周课程的详细内容
+- [探索工具生态](/tools) - 熟悉你将使用的 AI 编程工具
+- [浏览学习资料](/materials) - 深入学习各类技术文档

@@ -1,0 +1,106 @@
+# Pre-commit hooks configuration for Project Alpha
+# See https://pre-commit.com for more information
+
+repos:
+  # General file checks (only for project-alpha)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^w1/project-alpha/
+        exclude: ^(.*\.md|.*\.sql)$
+      - id: end-of-file-fixer
+        files: ^w1/project-alpha/
+        exclude: ^(.*\.md|.*\.sql)$
+      - id: check-yaml
+        files: ^w1/project-alpha/
+      - id: check-json
+        files: ^w1/project-alpha/
+        exclude: ^w1/project-alpha/frontend/tsconfig.*\.json$
+      - id: check-toml
+        files: ^w1/project-alpha/
+      - id: check-added-large-files
+        args: ['--maxkb=30000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        files: ^w1/project-alpha/
+        args: ['--fix=lf']
+
+  # Python formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+      - id: black
+        files: ^w1/project-alpha/backend/
+        args: ['--line-length=100']
+
+  - repo: https://github.com/pycqa/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        files: ^w1/project-alpha/backend/
+        args: ['--profile=black', '--line-length=100']
+
+  # Python type checking (warn only, don't fail)
+  # Note: Currently disabled due to type annotation issues in code
+  # Uncomment and fix type issues to enable
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.18.2
+  #   hooks:
+  #     - id: mypy
+  #       files: ^w1/project-alpha/backend/
+  #       additional_dependencies: [
+  #         sqlalchemy2-stubs,
+  #         pydantic,
+  #         types-psycopg2,
+  #       ]
+  #       args: [
+  #         '--python-version=3.11',
+  #         '--warn-return-any',
+  #         '--warn-unused-configs',
+  #         '--ignore-missing-imports',
+  #         '--no-strict-optional',
+  #         '--follow-imports=silent',
+  #         '--show-error-codes',
+  #       ]
+  #       verbose: true
+
+  # TypeScript/JavaScript linting
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.39.1
+    hooks:
+      - id: eslint
+        files: ^w1/project-alpha/frontend/.*\.(js|jsx|ts|tsx)$
+        additional_dependencies:
+          - eslint@9.36.0
+          - '@eslint/js@9.36.0'
+          - 'typescript-eslint@8.45.0'
+          - 'eslint-plugin-react-hooks@5.2.0'
+          - 'eslint-plugin-react-refresh@0.4.22'
+          - 'globals@16.4.0'
+        args: ['--fix', '--config', 'w1/project-alpha/frontend/eslint.config.js']
+
+  # TypeScript/JavaScript formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^w1/project-alpha/frontend/.*\.(js|jsx|ts|tsx|json|css|scss|html|yaml|yml|md)$
+        exclude: ^w1/project-alpha/frontend/(dist|node_modules|build)/
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        files: w1/project-alpha/.*\.(sh|bash)$
+
+  # Markdown linting (only for project-alpha)
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.45.0
+    hooks:
+      - id: markdownlint
+        files: ^w1/project-alpha/.*\.md$
+        args: ['--fix', '--disable', 'MD040']
+        exclude: ^(CHANGELOG\.md|node_modules/|dist/)'

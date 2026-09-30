@@ -1,0 +1,212 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import PageHeader from "../../components/ui/PageHeader";
+import ScrollReveal from "../../components/ui/ScrollReveal";
+import { BookOpen, Code, Wrench, Lightbulb, FileText } from "lucide-react";
+import { getUrl } from "../../utils/url";
+
+const materials = [
+  {
+    category: "工具深度解析",
+    icon: Wrench,
+    description: "深入了解 AI 编程工具的架构和使用",
+    items: [
+      {
+        title: "Claude Code 2.0 深度架构分析",
+        description: "完整逆向工程分析，16个System Prompts，50+架构图",
+        href: getUrl("materials/claude-code-architecture"),
+        tags: ["Claude Code", "架构", "高级"],
+      },
+      {
+        title: "Claude Code 系统提示词完整解析",
+        description: "43个系统提示词详细解析 - 工具使用、安全协议、代理架构核心机制",
+        href: getUrl("materials/claude-code-system-prompts"),
+        tags: ["Claude Code", "System Prompts", "深度解析"],
+      },
+      {
+        title: "Claude Code Hooks 完全指南",
+        description: "深度解析 Hooks 机制 - 9种事件类型、自动化工作流、安全防护最佳实践",
+        href: getUrl("materials/claude-code-hooks"),
+        tags: ["Claude Code", "Hooks", "自动化", "高级"],
+      },
+      {
+        title: "Claude Code Skills 完全指南",
+        description: "深度解析 Skills 机制 - 模块化能力扩展、智能调用、15+最佳实践",
+        href: getUrl("materials/claude-code-skills"),
+        tags: ["Claude Code", "Skills", "能力扩展", "高级"],
+      },
+      {
+        title: "Claude Code 安装配置指南",
+        description: "从零开始配置 Claude Code，最佳实践和技巧",
+        href: getUrl("materials/claude-code-setup"),
+        tags: ["Claude Code", "入门", "配置"],
+      },
+      {
+        title: "NotebookLM 完全指南",
+        description: "1M上下文窗口，闪卡、测验、思维导图全功能",
+        href: getUrl("materials/notebooklm-guide"),
+        tags: ["NotebookLM", "知识管理", "学习"],
+      },
+      {
+        title: "Cursor 2.0 完全学习指南",
+        description:
+          "架构设计深度剖析，Rules 和 Agent 实战指南，50+ Mermaid 图表",
+        href: getUrl("materials/cursor-intro"),
+        tags: ["Cursor", "架构", "Agent", "高级"],
+      },
+      {
+        title: "Claude Code 完全学习指南",
+        description:
+          "Anthropic 官方工具深度解析，Hooks/Commands/Agents 实战，15+ 架构图",
+        href: getUrl("materials/claude-code-intro"),
+        tags: ["Claude Code", "架构", "Hooks", "Agents"],
+      },
+      {
+        title: "Cursor Rules 完全指南",
+        description: "从零掌握 Cursor Rules 配置，MDC 格式详解，10+ 实战示例",
+        href: getUrl("materials/cursor-rules-guide"),
+        tags: ["Cursor", "Rules", "配置", "实战"],
+      },
+      {
+        title: "MCP (Model Context Protocol) 完全学习指南",
+        description:
+          "AI 应用的 USB-C 接口：标准化协议深度解析，架构设计、核心原语、安全模型，15+ Mermaid 架构图",
+        href: getUrl("materials/mcp-complete-guide"),
+        tags: ["MCP", "协议", "架构", "Agent", "深度解析"],
+      },
+    ],
+  },
+
+  {
+    category: "概念与理论",
+    icon: Lightbulb,
+    description: "AI 辅助编程的核心概念和理论基础",
+    items: [
+      {
+        title: "实时语音转写系统内部原理深度剖析",
+        description:
+          "音频采样率、回声消除、无锁并发设计 - 基于 RAFlow 的工程实践与行业研究",
+        href: getUrl("materials/transcribe-internals"),
+        tags: ["音频处理", "实时系统", "并发编程", "深度解析"],
+      },
+      {
+        title: "SpecKit 完整学习指南",
+        description:
+          "GitHub 规范驱动开发工具包，架构设计流程图解，从入门到精通",
+        href: getUrl("materials/speckit-intro"),
+        tags: ["SpecKit", "规范驱动", "工作流", "架构"],
+      },
+    ],
+  },
+  {
+    category: "实战案例",
+    icon: FileText,
+    description: "真实项目的开发过程和经验分享",
+    items: [],
+  },
+];
+---
+
+<PageLayout
+  title="学习资料 - 陈天 AI 训练营"
+  description="深度技术文章、工具分析、实战案例"
+>
+  <PageHeader
+    title="学习资料"
+    subtitle="深入理解 AI 编程工具与最佳实践"
+    client:load
+  >
+    <a href="#materials" class="md-btn">浏览资料</a>
+    <a href={getUrl("curriculum")} class="md-btn md-btn-secondary">返回课程</a>
+  </PageHeader>
+
+  <section
+    id="materials"
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <div class="text-center mb-12">
+          <h2 class="text-h2 font-bold text-ink mb-6">精选学习资料</h2>
+          <p
+            class="max-w-2xl mx-auto text-body text-slate"
+            style="line-height: 1.6;"
+          >
+            深度技术文章、架构分析、工具对比，助你全面掌握 AI 辅助编程
+          </p>
+        </div>
+      </ScrollReveal>
+
+      <div class="py-12">
+        {
+          materials.map((category, idx) => (
+            <ScrollReveal delay={idx * 0.1} client:load>
+              <div>
+                <div class="flex items-center gap-4 mb-6">
+                  <category.icon size={32} style={{ color: "var(--md-sky)" }} />
+                  <div>
+                    <h3 class="text-h2 font-bold text-ink">
+                      {category.category}
+                    </h3>
+                    <p class="text-body text-slate">{category.description}</p>
+                  </div>
+                </div>
+
+                {category.items.length > 0 ? (
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    {category.items.map((item) => (
+                      <a
+                        href={item.href}
+                        class="md-card md-card-interactive group p-6"
+                      >
+                        <h4 class="text-h3 font-bold mb-3 group-hover:text-sky transition-colors text-ink">
+                          {item.title}
+                        </h4>
+                        <p class="mb-4 text-body text-slate">
+                          {item.description}
+                        </p>
+                        <div class="flex flex-wrap gap-3">
+                          {item.tags.map((tag) => (
+                            <span class="md-badge text-eyebrow">{tag}</span>
+                          ))}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div class="md-card text-center p-space-8 bg-cream text-slate">
+                    即将推出更多精彩内容...
+                  </div>
+                )}
+              </div>
+            </ScrollReveal>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="md-section"
+    style="background-color: var(--md-sky); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container text-center">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-graphite mb-10">学以致用</h2>
+        <p
+          class="text-h3 mb-10 max-w-2xl mx-auto text-body text-graphite"
+          style="line-height: 1.5;"
+        >
+          理论结合实践，在课程和项目中应用所学知识
+        </p>
+        <div class="md-cta-stack justify-center">
+          <a href={getUrl("curriculum")} class="md-btn"> 开始学习课程 </a>
+          <a href={getUrl("projects")} class="md-btn md-btn-secondary">
+            查看实战项目
+          </a>
+        </div>
+      </ScrollReveal>
+    </div>
+  </section>
+</PageLayout>

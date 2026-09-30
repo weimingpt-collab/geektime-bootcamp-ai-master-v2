@@ -1,0 +1,31 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import ToolDetail from "../../components/tools/ToolDetail";
+import { getToolById } from "../../data/tools";
+import { getUrl } from "../../utils/url";
+
+const tool = getToolById("notebooklm");
+if (!tool) {
+  return Astro.redirect(getUrl("tools"));
+}
+---
+
+<PageLayout
+  title={`${tool.name} - ${tool.tagline}`}
+  description={tool.description}
+>
+  <div
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ToolDetail tool={tool} client:load />
+
+      <div class="mt-12 text-center">
+        <a href={getUrl("tools")} class="hover:underline text-body text-sky">
+          ← 返回工具生态
+        </a>
+      </div>
+    </div>
+  </div>
+</PageLayout>

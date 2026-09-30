@@ -1,0 +1,356 @@
+[
+  {
+    "key": "config_317",
+    "value": "https://cloudflare-dns.com/dns-query",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_324",
+    "value": "https://e531a1d9ec1de9064fae9d4affb0b0f4@o1158394.ingest.us.sentry.io/4508259541909504",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_384",
+    "value": "https://json.schemastore.org/claude-code-settings.json",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_834",
+    "value": "https://docs.aws.amazon.com/sdkref/latest/guide/feature-static-credentials.html",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_836",
+    "value": "/latest/api/token",
+    "value_type": "String",
+    "category": "API"
+  },
+  {
+    "key": "config_844",
+    "value": "http://169.254.170.2",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_953",
+    "value": "https://sts.{Region}.{PartitionResult#dnsSuffix}",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_966",
+    "value": "https://sts.amazonaws.com",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_1154",
+    "value": "VERSIONING",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_1316",
+    "value": "http://169.254.170.2",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_1529",
+    "value": "https://sts.{Region}.{PartitionResult#dnsSuffix}",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_1542",
+    "value": "https://sts.amazonaws.com",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_1927",
+    "value": "claude-opus-4-1",
+    "value_type": "String",
+    "category": "Model"
+  },
+  {
+    "key": "config_1928",
+    "value": "claude-opus-4",
+    "value_type": "String",
+    "category": "Model"
+  },
+  {
+    "key": "config_2079",
+    "value": "http://169.254.170.2",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2171",
+    "value": "https://sts.{Region}.{PartitionResult#dnsSuffix}",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2184",
+    "value": "https://sts.amazonaws.com",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2279",
+    "value": "http://169.254.170.2",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2359",
+    "value": "https://sts.{Region}.{PartitionResult#dnsSuffix}",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2372",
+    "value": "https://sts.amazonaws.com",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2805",
+    "value": "https://www.googleapis.com/oauth2/v4/token",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2806",
+    "value": "https://accounts.google.com/o/oauth2/revoke?token=",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2814",
+    "value": "https://www.googleapis.com/auth/cloud-platform",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2815",
+    "value": "//iam\\.googleapis\\.com/locations/[^/]+/workforcePools/[^/]+/providers/.+",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2816",
+    "value": "https://sts.{universeDomain}/v1/token",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2824",
+    "value": "https://sts.{universeDomain}/v1/oauthtoken",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_2868",
+    "value": "https://github.com/anthropics/claude-code/issues",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_3176",
+    "value": "CLAUDE_CODE_SANDBOX=1",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_5008",
+    "value": "COMPONENT_TOKEN_LOCK_TYPE EDOCUMENT_VERSION_LOCK_TYPE ",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_5029",
+    "value": "EDOC_VERSION_ACTIVE_STAGE_CODE EDOC_VERSION_DESIGN_STAGE_CODE EDOC_VERSION_OBSOLETE_STAGE_CODE ",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_5363",
+    "value": "VERSION|0",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_15816",
+    "value": "https://claude.com/claude-code",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_15907",
+    "value": "http://json-schema.org/draft-07/schema",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16102",
+    "value": "http://localhost:3118/callback",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16106",
+    "value": "anthropic.claude-code",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_16139",
+    "value": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16153",
+    "value": "@anthropic-ai/claude-code",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16318",
+    "value": "http://169.254.170.2",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16410",
+    "value": "https://sts.{Region}.{PartitionResult#dnsSuffix}",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16423",
+    "value": "https://sts.amazonaws.com",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16483",
+    "value": "https://sts.{Region}.{PartitionResult#dnsSuffix}",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16496",
+    "value": "https://sts.amazonaws.com",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16580",
+    "value": "http://www.apple.com/DTDs/PropertyList-1.0.dtd",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_16717",
+    "value": "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17648",
+    "value": "http://localhost:4317",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17687",
+    "value": "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17688",
+    "value": "https://raw.githubusercontent.com/anthropics/claude-code/refs/heads/main/CHANGELOG.md",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17752",
+    "value": "https://github.com/anthropics/claude-code-action/blob/main/docs/setup.md",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17764",
+    "value": "Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17811",
+    "value": "https://docs.claude.com/en/docs/claude-code/claude_code_docs_map.md",
+    "value_type": "String",
+    "category": "Path"
+  },
+  {
+    "key": "config_17813",
+    "value": "claude-sonnet-4-5-20250929",
+    "value_type": "String",
+    "category": "Model"
+  },
+  {
+    "key": "config_17945",
+    "value": "CLAUDE_CODE_OAUTH_TOKEN",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17946",
+    "value": "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17950",
+    "value": "ANTHROPIC_API_KEY",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17951",
+    "value": "ANTHROPIC_API_KEY",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17952",
+    "value": "ANTHROPIC_API_KEY",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17954",
+    "value": "ANTHROPIC_API_KEY",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17955",
+    "value": "ANTHROPIC_API_KEY",
+    "value_type": "String",
+    "category": "Other"
+  },
+  {
+    "key": "config_17963",
+    "value": "https://http-intake.logs.datadoghq.com/api/v2/logs",
+    "value_type": "String",
+    "category": "API"
+  }
+]

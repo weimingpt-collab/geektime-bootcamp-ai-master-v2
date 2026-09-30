@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "pg-mcp": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "E:\\vs_codeing\\geektime-bootcamp-ai-master-v2\\w5\\pg-mcp",
+        "run",
+        "python",
+        "-m",
+        "pg_mcp"
+      ]
+    }
+  }
+}

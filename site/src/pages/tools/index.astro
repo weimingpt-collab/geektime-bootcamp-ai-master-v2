@@ -1,0 +1,180 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import PageHeader from "../../components/ui/PageHeader";
+import ToolShowcase from "../../components/tools/ToolShowcase";
+import ScrollReveal from "../../components/ui/ScrollReveal";
+import { tools } from "../../data/tools";
+import { getUrl, getImageUrl } from "../../utils/url";
+
+const editors = tools.filter((t) => t.category === "editor");
+const models = tools.filter((t) => t.category === "model");
+const protocols = tools.filter((t) => t.category === "protocol");
+const knowledge = tools.filter((t) => t.category === "knowledge");
+---
+
+<PageLayout
+  title="工具生态 - 陈天 AI 训练营"
+  description="掌握最前沿的 AI 辅助编程工具"
+>
+  <PageHeader
+    title="工具生态"
+    subtitle="构建你的 AI 辅助开发工具链"
+    client:load
+  >
+    <div class="justify-center md-cta-stack">
+      <a href="#editors" class="md-btn"> 探索工具 </a>
+      <a href={getUrl("curriculum")} class="md-btn md-btn-secondary">
+        查看课程
+      </a>
+    </div>
+  </PageHeader>
+
+  <section
+    id="editors"
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="font-bold text-center text-h2 text-ink mb-6">
+          AI 代码编辑器
+        </h2>
+        <p
+          class="mx-auto max-w-2xl text-center mb-12 text-body text-ink"
+          style="line-height: 1.6;"
+        >
+          新一代 AI 原生开发工具，让编程变得更智能、更高效
+        </p>
+      </ScrollReveal>
+
+      <div class="py-12">
+        {
+          editors.map((tool, index) => (
+            <ToolShowcase
+              id={tool.id}
+              name={tool.name}
+              tagline={tool.tagline}
+              description={tool.description}
+              features={tool.features}
+              href={getUrl(`tools/${tool.id}`)}
+              reverse={index % 2 === 1}
+              imageUrl={getImageUrl(`images/tools/${tool.id}.jpg`)}
+              client:load
+            />
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="md-section"
+    style="background-color: var(--md-sky); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="font-bold text-center text-h2 text-graphite mb-6">
+          大语言模型
+        </h2>
+        <p
+          class="mx-auto max-w-2xl text-center mb-12 text-body text-graphite"
+          style="line-height: 1.6;"
+        >
+          强大的 AI 模型，为编程工具提供智能支持
+        </p>
+      </ScrollReveal>
+
+      <div class="py-12">
+        {
+          models.map((tool, index) => (
+            <ToolShowcase
+              id={tool.id}
+              name={tool.name}
+              tagline={tool.tagline}
+              description={tool.description}
+              features={tool.features}
+              href={getUrl(`tools/${tool.id}`)}
+              reverse={index % 2 === 0}
+              imageUrl={getImageUrl(`images/tools/${tool.id}.jpg`)}
+              client:load
+            />
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="font-bold text-center text-h2 text-ink mb-6">协议与生态</h2>
+        <p
+          class="mx-auto max-w-2xl text-center mb-12 text-body text-slate"
+          style="line-height: 1.6;"
+        >
+          开放协议和生态系统，扩展 AI 的能力边界
+        </p>
+      </ScrollReveal>
+
+      <div class="py-12">
+        {
+          protocols.map((tool, index) => (
+            <ToolShowcase
+              id={tool.id}
+              name={tool.name}
+              tagline={tool.tagline}
+              description={tool.description}
+              features={tool.features}
+              href={getUrl(`tools/${tool.id}`)}
+              reverse={index % 2 === 1}
+              imageUrl={getImageUrl(`images/tools/${tool.id}.jpg`)}
+              client:load
+            />
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {
+    knowledge.length > 0 && (
+      <section
+        class="md-section"
+        style="background-color: var(--md-soft-blue); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+      >
+        <div class="md-container">
+          <ScrollReveal client:load>
+            <h2 class="font-bold text-center text-h2 text-ink mb-6">
+              知识管理
+            </h2>
+            <p
+              class="mx-auto max-w-2xl text-center mb-12 text-body text-slate"
+              style="line-height: 1.6;"
+            >
+              智能化的知识管理和学习辅助工具
+            </p>
+          </ScrollReveal>
+
+          <div class="py-12">
+            {knowledge.map((tool, index) => (
+              <ToolShowcase
+                id={tool.id}
+                name={tool.name}
+                tagline={tool.tagline}
+                description={tool.description}
+                features={tool.features}
+                href={getUrl(`tools/${tool.id}`)}
+                reverse={index % 2 === 0}
+                imageUrl={getImageUrl(`images/tools/${tool.id}.jpg`)}
+                client:load
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</PageLayout>

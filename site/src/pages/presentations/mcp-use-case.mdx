@@ -1,0 +1,136 @@
+---
+layout: ../../layouts/PresentationLayout.astro
+title: AI Agent 驱动的云网络革命
+description: 探索 AWS Cloud WAN MCP 服务器如何利用 AI 智能体将复杂的云网络运营化为有序之美
+category: 技术分享
+---
+
+import PresentationCarousel from '../../components/presentations/PresentationCarousel';
+import { getUrl } from '../../utils/url';
+
+# AI Agent 驱动的云网络革命
+
+这份演示文稿由 NotebookLM 生成，深入探讨了如何利用 AI Agent 和 MCP（Model Context Protocol）服务器来革新云网络运营。通过生动的插图和清晰的架构图，展示了 AWS Cloud WAN MCP 服务器的设计理念和实际应用。
+
+<PresentationCarousel
+  client:load
+  title="AI Agent 驱动的云网络革命"
+  slides={[
+    {
+      image: "/slides/mcp-use-case/001.jpg",
+      alt: "封面 - 用AI智能体革新云网络运营",
+      caption: "用 AI 智能体革新云网络运营 - 探索 AWS Cloud WAN MCP 服务器如何将复杂性化为有序之美"
+    },
+    {
+      image: "/slides/mcp-use-case/002.jpg",
+      alt: "网络地狱 - 复杂网络架构的痛点",
+      caption: "我们都曾深陷这样的「网络地狱」- 耗时巨大、易出错、认知过载是传统网络管理的三大痛点"
+    },
+    {
+      image: "/slides/mcp-use-case/003.jpg",
+      alt: "旧地图无法指引新世界",
+      caption: "传统工具的局限：点击操作学习曲线高但重复性强，命令行脚本功能强但脆弱，原生 SDK 潜力无限但需专业开发技能"
+    },
+    {
+      image: "/slides/mcp-use-case/004.jpg",
+      alt: "AI智能体介绍",
+      caption: "AI 智能体（AI Agent）：一种能自主感知环境、做出决策并采取行动的智能系统"
+    },
+    {
+      image: "/slides/mcp-use-case/005.jpg",
+      alt: "智能体的生长循环",
+      caption: "智能体的「生长循环」：从目标到成果 - 接收目标、推理与规划、调用工具、获得新信息并再次循环"
+    },
+    {
+      image: "/slides/mcp-use-case/006.jpg",
+      alt: "MCP协议介绍",
+      caption: "MCP（Model Context Protocol）：连接 AI 大脑与外部世界的标准化协议，让智能体能够使用各种工具"
+    },
+    {
+      image: "/slides/mcp-use-case/007.jpg",
+      alt: "AWS网络MCP服务器介绍",
+      caption: "AWS 网络 MCP 服务器：一个开源项目，让 AI 智能体能够理解和管理复杂的 AWS 网络环境"
+    },
+    {
+      image: "/slides/mcp-use-case/008.jpg",
+      alt: "三大核心能力",
+      caption: "三大核心能力：网络拓扑理解、路径分析与故障排查、安全策略审计"
+    },
+    {
+      image: "/slides/mcp-use-case/009.jpg",
+      alt: "服务器如何将API调用转化为智能工具",
+      caption: "深入引擎室：服务器如何将 API 调用转化为智能工具 - 更高的抽象层级，将错误抛给 LLM 处理"
+    },
+    {
+      image: "/slides/mcp-use-case/010.jpg",
+      alt: "设计哲学 - 打造专业工具箱",
+      caption: "设计哲学：打造专业的工具箱，而非笨重的万能刀 - 利用智能体和 LLM 进行决策，而不是将 MCP 变成巨型脚本"
+    },
+    {
+      image: "/slides/mcp-use-case/011.jpg",
+      alt: "真实案例演示",
+      caption: "真实案例：从自然语言问题「为什么我的流量无法到达目标？」到智能分析与解决方案"
+    },
+    {
+      image: "/slides/mcp-use-case/012.jpg",
+      alt: "调用工具链",
+      caption: "智能体的工具调用链：获取网络详情 → 分析路由表 → 检查安全组 → 生成报告"
+    },
+    {
+      image: "/slides/mcp-use-case/013.jpg",
+      alt: "机器生成的专家级分析报告",
+      caption: "一份机器生成、专家水准的分析报告：包含路径总览图、安全控制分析、发现的问题、连接性矩阵"
+    },
+    {
+      image: "/slides/mcp-use-case/014.jpg",
+      alt: "核心网络数据获取",
+      caption: "核心网络数据获取：从 AWS API 响应到结构化的网络拓扑信息"
+    },
+    {
+      image: "/slides/mcp-use-case/015.jpg",
+      alt: "从JSON到洞察 - AI绘制网络连接地图",
+      caption: "从 JSON 到洞察：AI 绘制的网络连接地图 - 分段连接图、连接性矩阵、网络功能组分析"
+    },
+    {
+      image: "/slides/mcp-use-case/016.jpg",
+      alt: "实际应用场景",
+      caption: "实际应用场景：网络故障排查、安全合规审计、架构文档生成、变更影响评估"
+    },
+    {
+      image: "/slides/mcp-use-case/017.jpg",
+      alt: "未来展望",
+      caption: "未来展望：从被动响应到主动预防，AI 智能体将成为云网络运维的得力助手"
+    },
+    {
+      image: "/slides/mcp-use-case/018.jpg",
+      alt: "开始构建您的智能网络花园",
+      caption: "开始构建您自己的智能网络花园 - AWS 网络 MCP 服务器已在 AWS Labs 作为开源项目发布"
+    }
+  ]}
+/>
+
+## 核心要点
+
+### 传统网络管理的痛点
+- **耗时巨大**：逐一排查每个元素，如同在迷宫中摸索
+- **易出错**：手动追踪 A 点到 B 点的路径，每一步都可能犯错
+- **认知过载**：双核心网络、多区域、检查 VPC、网络功能组繁多
+
+### AI Agent 的解决方案
+- **智能体生长循环**：接收目标 → 推理与规划 → 调用工具 → 获得新信息并再次循环
+- **MCP 协议**：连接 AI 大脑与外部世界的标准化协议
+- **专业工具箱设计**：打造专业的工具箱，而非笨重的万能刀
+
+### AWS Cloud WAN MCP 服务器
+- **三大核心能力**：网络拓扑理解、路径分析与故障排查、安全策略审计
+- **高级抽象**：每个工具都封装了多个 API 调用，为 LLM 提供更丰富、更直接的信息
+- **智能错误处理**：将错误信息返回给 LLM，让模型来决定下一步
+
+### 开源项目
+项目地址：[github.com/awslabs/aws-networking-mcp-server](https://github.com/awslabs/aws-networking-mcp-server)
+
+## 延伸阅读
+
+- [查看 MCP 完整指南](/materials/mcp-complete-guide) - 深入了解 MCP 协议和应用
+- [查看课程大纲](/curriculum) - 了解 AI 编程训练营完整内容
+- [探索工具生态](/tools) - 学习 AI 编程工具的使用

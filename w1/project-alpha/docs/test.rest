@@ -1,0 +1,302 @@
+### Project Alpha API 测试文件
+### 使用 REST Client 扩展测试 API
+### 基础 URL
+@baseUrl = http://localhost:8000
+@apiPrefix = {{baseUrl}}/api/v1
+
+### ============================================
+### 健康检查和基础端点
+### ============================================
+
+### 健康检查
+GET {{baseUrl}}/health
+
+### 根路径
+GET {{baseUrl}}/
+
+### ============================================
+### Tags API
+### ============================================
+
+### 获取所有标签
+GET {{apiPrefix}}/tags
+
+### 创建标签 - backend
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "backend",
+  "color": "#3B82F6"
+}
+
+### 创建标签 - frontend
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "frontend",
+  "color": "#10B981"
+}
+
+### 创建标签 - urgent (自动生成颜色)
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "urgent"
+}
+
+### 创建标签 - bug
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "bug",
+  "color": "#EF4444"
+}
+
+### 创建标签 - feature
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "feature",
+  "color": "#8B5CF6"
+}
+
+### 获取单个标签 (替换 {tag_id} 为实际 ID)
+GET {{apiPrefix}}/tags/1
+
+### 删除标签 (替换 {tag_id} 为实际 ID)
+DELETE {{apiPrefix}}/tags/1
+
+### ============================================
+### Tickets API
+### ============================================
+
+### 获取所有 Tickets
+GET {{apiPrefix}}/tickets
+
+### 获取 Tickets - 按状态过滤 (pending)
+GET {{apiPrefix}}/tickets?status=pending
+
+### 获取 Tickets - 按状态过滤 (completed)
+GET {{apiPrefix}}/tickets?status=completed
+
+### 获取 Tickets - 按标签过滤 (替换 tag_ids 为实际 ID)
+GET {{apiPrefix}}/tickets?tag_ids=1,2
+
+### 获取 Tickets - 搜索 (按标题)
+GET {{apiPrefix}}/tickets?search=登录
+
+### 获取 Tickets - 分页
+GET {{apiPrefix}}/tickets?skip=0&limit=10
+
+### 创建 Ticket - 基础
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "实现用户登录功能",
+  "description": "需要实现基于 JWT 的用户认证系统"
+}
+
+### 创建 Ticket - 带标签 (替换 tag_ids 为实际 ID)
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "修复导航栏样式问题",
+  "description": "移动端导航栏显示异常，需要修复响应式布局",
+  "tag_ids": [1, 4]
+}
+
+### 创建 Ticket - 多个标签
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "添加数据导出功能",
+  "description": "支持导出 Ticket 为 CSV 格式",
+  "tag_ids": [1, 5]
+}
+
+### 创建 Ticket - 紧急任务
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "修复生产环境崩溃问题",
+  "description": "生产环境出现严重错误，需要立即修复",
+  "tag_ids": [3, 4]
+}
+
+### 获取单个 Ticket (替换 {ticket_id} 为实际 ID)
+GET {{apiPrefix}}/tickets/1
+
+### 更新 Ticket (替换 {ticket_id} 为实际 ID)
+PUT {{apiPrefix}}/tickets/1
+Content-Type: application/json
+
+{
+  "title": "更新后的标题",
+  "description": "更新后的描述信息"
+}
+
+### 更新 Ticket - 仅更新标题
+PUT {{apiPrefix}}/tickets/1
+Content-Type: application/json
+
+{
+  "title": "仅更新标题"
+}
+
+### 更新 Ticket - 仅更新描述
+PUT {{apiPrefix}}/tickets/1
+Content-Type: application/json
+
+{
+  "description": "仅更新描述"
+}
+
+### 完成 Ticket (替换 {ticket_id} 为实际 ID)
+PATCH {{apiPrefix}}/tickets/1/complete
+
+### 取消完成 Ticket (替换 {ticket_id} 为实际 ID)
+PATCH {{apiPrefix}}/tickets/1/uncomplete
+
+### 为 Ticket 添加标签 (替换 {ticket_id} 和 tag_ids 为实际值)
+POST {{apiPrefix}}/tickets/1/tags
+Content-Type: application/json
+
+[2, 3]
+
+### 从 Ticket 移除标签 (替换 {ticket_id} 和 {tag_id} 为实际值)
+DELETE {{apiPrefix}}/tickets/1/tags/2
+
+### 删除 Ticket (替换 {ticket_id} 为实际 ID)
+DELETE {{apiPrefix}}/tickets/1
+
+### ============================================
+### 复杂查询示例
+### ============================================
+
+### 组合查询 - 待完成 + 特定标签 + 搜索
+GET {{apiPrefix}}/tickets?status=pending&tag_ids=1&search=登录
+
+### 组合查询 - 已完成 + 多个标签
+GET {{apiPrefix}}/tickets?status=completed&tag_ids=1,5
+
+### 组合查询 - 搜索 + 分页
+GET {{apiPrefix}}/tickets?search=修复&skip=0&limit=5
+
+### ============================================
+### 错误场景测试
+### ============================================
+
+### 获取不存在的 Ticket (应该返回 404)
+GET {{apiPrefix}}/tickets/99999
+
+### 更新不存在的 Ticket (应该返回 404)
+PUT {{apiPrefix}}/tickets/99999
+Content-Type: application/json
+
+{
+  "title": "不存在的 Ticket"
+}
+
+### 删除不存在的 Ticket (应该返回 404)
+DELETE {{apiPrefix}}/tickets/99999
+
+### 创建重复名称的标签 (应该返回 400)
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "backend",
+  "color": "#3B82F6"
+}
+
+### 创建 Ticket - 标题为空 (应该返回 422)
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "",
+  "description": "标题为空"
+}
+
+### 创建 Ticket - 标题过长 (应该返回 422)
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "这是一个非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常长的标题，超过了255个字符的限制",
+  "description": "标题过长"
+}
+
+### 创建标签 - 颜色格式错误 (应该返回 422)
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "invalid-color",
+  "color": "not-a-color"
+}
+
+### ============================================
+### 完整工作流测试
+### ============================================
+
+### 步骤 1: 创建标签
+POST {{apiPrefix}}/tags
+Content-Type: application/json
+
+{
+  "name": "workflow-test",
+  "color": "#6366F1"
+}
+
+### 步骤 2: 创建 Ticket
+POST {{apiPrefix}}/tickets
+Content-Type: application/json
+
+{
+  "title": "工作流测试 Ticket",
+  "description": "这是一个完整的工作流测试",
+  "tag_ids": []
+}
+
+### 步骤 3: 为 Ticket 添加标签 (使用步骤1创建的标签ID)
+POST {{apiPrefix}}/tickets/1/tags
+Content-Type: application/json
+
+[1]
+
+### 步骤 4: 完成 Ticket
+PATCH {{apiPrefix}}/tickets/1/complete
+
+### 步骤 5: 查看完成的 Ticket
+GET {{apiPrefix}}/tickets/1
+
+### 步骤 6: 取消完成 Ticket
+PATCH {{apiPrefix}}/tickets/1/uncomplete
+
+### 步骤 7: 更新 Ticket
+PUT {{apiPrefix}}/tickets/1
+Content-Type: application/json
+
+{
+  "title": "更新后的工作流测试 Ticket",
+  "description": "已更新的描述"
+}
+
+### 步骤 8: 从 Ticket 移除标签
+DELETE {{apiPrefix}}/tickets/1/tags/1
+
+### 步骤 9: 删除 Ticket
+DELETE {{apiPrefix}}/tickets/1
+
+### 步骤 10: 删除标签
+DELETE {{apiPrefix}}/tags/1

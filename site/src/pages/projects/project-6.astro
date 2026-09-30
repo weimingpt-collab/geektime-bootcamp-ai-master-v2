@@ -1,0 +1,31 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import ProjectDetail from "../../components/projects/ProjectDetail";
+import { getProjectById } from "../../data/projects";
+import { getUrl } from "../../utils/url";
+
+const project = getProjectById("project-6");
+if (!project) {
+  return Astro.redirect(getUrl("projects"));
+}
+---
+
+<PageLayout
+  title={`${project.title} - 陈天 AI 训练营`}
+  description={project.subtitle}
+>
+  <div
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ProjectDetail project={project} client:load />
+
+      <div class="mt-12 text-center">
+        <a href={getUrl("projects")} class="hover:underline text-body text-sky">
+          ← 返回所有项目
+        </a>
+      </div>
+    </div>
+  </div>
+</PageLayout>

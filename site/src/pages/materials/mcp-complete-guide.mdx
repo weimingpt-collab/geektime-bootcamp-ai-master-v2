@@ -1,0 +1,1064 @@
+---
+layout: ../../layouts/MaterialLayout.astro
+title: MCP (Model Context Protocol) 完全学习指南
+description: 深入剖析 MCP 协议架构、设计原理、核心组件与工作流程 - AI Agent 能力扩展的标准化协议
+category: 工具深度解析
+---
+
+import MetricCard from '../../components/materials/MetricCard';
+import Mermaid from '../../components/materials/Mermaid';
+import ScrollReveal from '../../components/ui/ScrollReveal';
+import ExampleCode from '../../components/materials/ExampleCode';
+
+# MCP (Model Context Protocol) 完全学习指南
+
+**AI 应用的 USB-C 接口：标准化的模型上下文协议深度解析**
+
+> **协议版本**: MCP 2025 | **基金会**: Agentic AI Foundation (Linux Foundation) | **核心传输**: JSON-RPC 2.0
+
+---
+
+## 核心指标概览
+
+export const mcpMetrics = [
+  { label: '核心原语', value: 3, color: '#b3272c', icon: '🔧' },
+  { label: '传输协议', value: 2, color: '#772d8b', icon: '🔌' },
+  { label: '官方 SDK', value: 4, color: '#77a0a9', icon: '📦' },
+  { label: '社区服务器', value: 100, unit: '+', color: '#d3f9b5', icon: '🌐' },
+  { label: '创始成员', value: 10, unit: '+', color: '#f5cbc5', icon: '🏢' },
+  { label: '支持客户端', value: 20, unit: '+', color: '#772d8b', icon: '💻' }
+]
+
+<MetricCard title="MCP 生态核心数据" items={mcpMetrics} type="number" client:load />
+
+---
+
+## 什么是 MCP？
+
+**模型上下文协议 (Model Context Protocol, MCP)** 是由 Anthropic 发起、现由 Linux 基金会旗下 **Agentic AI Foundation** 管理的开放标准协议。它解决了 AI 应用领域长期存在的 **"N × M" 集成难题**：将 LLM 连接到 GitHub、PostgreSQL 或本地文件系统需要为每个模型和每个数据源编写特定的"胶水代码"，导致维护成本呈指数级增长。
+
+MCP 被形象地称为 **"AI 应用的 USB-C 接口"**，它通过建立一种标准化的、基于 JSON-RPC 2.0 的通用接口，实现了模型与工具、资源、提示词的解耦，使得一次开发即可在 Claude Desktop、VS Code、Cursor 等多个宿主环境中复用。
+
+---
+
+## MCP 整体架构
+
+### 系统架构全景图
+
+<Mermaid chart={`graph TB
+    subgraph UserLayer["用户层"]
+        User["用户"]
+        NL["自然语言请求"]
+    end
+
+    subgraph HostLayer["宿主层 Host Layer"]
+        Host["MCP Host<br/>Claude Desktop / VS Code / Cursor"]
+        LLM["LLM<br/>Claude / GPT / Gemini"]
+        Security["安全守门人<br/>权限审批"]
+    end
+
+    subgraph ClientLayer["客户端层 Client Layer"]
+        Client1["MCP Client 1"]
+        Client2["MCP Client 2"]
+        Client3["MCP Client 3"]
+    end
+
+    subgraph TransportLayer["传输层 Transport Layer"]
+        STDIO["STDIO<br/>本地进程通信"]
+        HTTP["HTTP/SSE<br/>远程服务通信"]
+    end
+
+    subgraph ServerLayer["服务器层 Server Layer"]
+        Server1["GitHub MCP Server<br/>代码仓库操作"]
+        Server2["PostgreSQL MCP Server<br/>数据库查询"]
+        Server3["Playwright MCP Server<br/>浏览器自动化"]
+        Server4["Filesystem MCP Server<br/>文件系统访问"]
+    end
+
+    subgraph ExternalResources["外部资源"]
+        GitHub["GitHub API"]
+        DB["PostgreSQL"]
+        Browser["Chrome/Firefox"]
+        FS["本地文件系统"]
+    end
+
+    User --> NL
+    NL --> Host
+    Host --> LLM
+    Host --> Security
+    Security --> Client1
+    Security --> Client2
+    Security --> Client3
+
+    Client1 --> STDIO
+    Client2 --> HTTP
+    Client3 --> STDIO
+
+    STDIO --> Server1
+    HTTP --> Server2
+    STDIO --> Server3
+    STDIO --> Server4
+
+    Server1 --> GitHub
+    Server2 --> DB
+    Server3 --> Browser
+    Server4 --> FS
+
+    classDef hostStyle fill:#e8f4fd,stroke:#1e88e5,stroke-width:2px
+    classDef serverStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef llmStyle fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+
+    class Host hostStyle
+    class LLM llmStyle
+    class Server1,Server2,Server3,Server4 serverStyle`} client:load />
+
+### 三层架构详解
+
+| 层级 | 组件 | 职责 | 示例 |
+|------|------|------|------|
+| **宿主层** | MCP Host | AI 应用容器，协调 LLM 与用户交互，管理连接生命周期 | Claude Desktop, VS Code, Cursor |
+| **客户端层** | MCP Client | 驻留在宿主内部，负责与服务器建立 1:1 连接 | 内置于宿主的协议处理模块 |
+| **服务器层** | MCP Server | 能力提供者，专注特定领域逻辑 | github-mcp, postgres-mcp, playwright-mcp |
+
+---
+
+## 核心组件详解
+
+### Host (宿主)
+
+<Mermaid chart={`graph LR
+    subgraph HostDuties["MCP Host 职责"]
+        A["用户交互管理"]
+        B["连接生命周期"]
+        C["安全守门人"]
+        D["能力聚合"]
+        E["配置管理"]
+    end
+
+    subgraph HostInstances["Host 实例"]
+        H1["Claude Desktop"]
+        H2["VS Code + Continue"]
+        H3["Cursor IDE"]
+        H4["Windsurf"]
+        H5["自定义 Agent 应用"]
+    end
+
+    A --> H1
+    B --> H2
+    C --> H3
+    D --> H4
+    E --> H5
+
+    classDef dutyStyle fill:#e3f2fd,stroke:#1976d2
+    class A,B,C,D,E dutyStyle`} client:load />
+
+**核心职责：**
+- 作为 AI 应用程序的容器（如 Claude Desktop 或 IDE）
+- 协调 LLM 与用户的交互
+- 管理连接生命周期
+- 作为最终的安全守门人
+- 不直接执行工具逻辑，通过客户端聚合来自不同服务器的能力
+
+### Client (客户端)
+
+<Mermaid chart={`graph TB
+    subgraph ClientStructure["MCP Client 内部结构"]
+        subgraph ProtocolHandling["协议处理"]
+            Handshake["协议握手"]
+            Negotiate["能力协商"]
+            Route["消息路由"]
+        end
+
+        subgraph MessageFormat["消息格式"]
+            JSONRPC["JSON-RPC 2.0"]
+            Request["请求消息"]
+            Response["响应消息"]
+            Notification["通知消息"]
+        end
+
+        subgraph ConnectionMgmt["连接管理"]
+            Conn["1:1 连接模式"]
+            State["状态维护"]
+            Retry["重连机制"]
+        end
+    end
+
+    Handshake --> JSONRPC
+    Negotiate --> Request
+    Route --> Response
+    Route --> Notification
+
+    JSONRPC --> Conn
+    State --> Retry
+
+    classDef protoStyle fill:#fff3e0,stroke:#ff9800
+    class Handshake,Negotiate,Route protoStyle`} client:load />
+
+**核心职责：**
+- 驻留在宿主内部
+- 负责与服务器建立 1:1 的连接
+- 处理协议握手、能力协商 (Capability Negotiation)
+- 消息路由
+- 将用户的自然语言请求转化为对服务器工具的结构化调用
+
+### Server (服务器)
+
+<Mermaid chart={`graph TB
+    subgraph ServerArch["MCP Server 架构"]
+        subgraph Primitives["暴露的原语"]
+            Tools["Tools 工具<br/>可执行函数"]
+            Resources["Resources 资源<br/>只读数据"]
+            Prompts["Prompts 提示词<br/>交互模板"]
+        end
+
+        subgraph ServerTypes["服务器类型"]
+            Local["本地服务器<br/>轻量级进程"]
+            Remote["远程服务器<br/>微服务部署"]
+        end
+
+        subgraph DomainCaps["领域能力"]
+            DBAccess["数据库访问"]
+            GitOps["版本控制"]
+            WebCtrl["浏览器控制"]
+            CloudMgmt["云平台管理"]
+        end
+    end
+
+    Tools --> Local
+    Resources --> Local
+    Prompts --> Remote
+
+    Local --> DBAccess
+    Local --> GitOps
+    Remote --> WebCtrl
+    Remote --> CloudMgmt
+
+    classDef primitiveStyle fill:#c8e6c9,stroke:#388e3c
+    class Tools,Resources,Prompts primitiveStyle`} client:load />
+
+**核心职责：**
+- 能力的提供者
+- 可以是本地运行的轻量级进程，也可以是远程部署的微服务
+- 专注于特定的领域逻辑（如访问数据库或控制浏览器）
+- 将能力通过 MCP 原语暴露给客户端
+
+---
+
+## 传输层协议
+
+### 传输协议对比
+
+<Mermaid chart={`graph LR
+    subgraph STDIOTransport["STDIO 传输"]
+        S1["宿主进程"]
+        S2["服务器进程"]
+        S3["请求流 stdin"]
+        S4["响应流 stdout"]
+        S5["日志流 stderr"]
+        S1 -->|启动| S2
+        S2 --> S3
+        S2 --> S4
+        S2 --> S5
+    end
+
+    subgraph HTTPTransport["HTTP/SSE 传输"]
+        H1["客户端"]
+        H2["请求 POST"]
+        H3["服务器"]
+        H4["实时更新 SSE"]
+        H5["响应 Response"]
+        H1 -->|HTTP POST| H2
+        H2 --> H3
+        H3 -->|SSE Push| H4
+        H3 -->|HTTP| H5
+    end
+
+    classDef stdioStyle fill:#e1f5fe,stroke:#0288d1
+    classDef httpStyle fill:#fce4ec,stroke:#c2185b
+    class S1,S2,S3,S4,S5 stdioStyle
+    class H1,H2,H3,H4,H5 httpStyle`} client:load />
+
+### STDIO 传输
+
+```bash
+# 宿主启动服务器进程
+npx -y @playwright/mcp@latest
+
+# 或者 Python 服务器
+python my_mcp_server.py
+```
+
+**特点：**
+- 本地开发工具最常用的模式
+- 延迟极低
+- 天然继承宿主进程的用户权限
+- 适合文件系统操作或本地构建任务
+
+### HTTP/SSE 传输
+
+<Mermaid chart={`sequenceDiagram
+    participant Client as MCP Client
+    participant Server as MCP Server Remote
+
+    Client->>Server: HTTP POST /initialize
+    Server-->>Client: SSE capabilities
+
+    Client->>Server: HTTP POST /tools/call
+    Server-->>Client: SSE progress update
+    Server-->>Client: SSE progress update
+    Server-->>Client: SSE result
+
+    Client->>Server: HTTP POST /resources/read
+    Server-->>Client: HTTP Response data`} client:load />
+
+**特点：**
+- 适用于分布式部署
+- 支持多客户端连接
+- 需要额外的认证机制（如 OAuth）
+- 适合企业级共享服务
+
+---
+
+## 核心原语 (Primitives)
+
+MCP 定义了三种核心原语，它们构成了代理与世界交互的语汇：
+
+<Mermaid chart={`graph TB
+    subgraph MCPPrimitives["MCP 三大原语"]
+        subgraph ToolsPrimitive["Tools 工具"]
+            T1["代理的手"]
+            T2["可执行函数"]
+            T3["具有副作用"]
+            T4["类似 POST 请求"]
+        end
+
+        subgraph ResourcesPrimitive["Resources 资源"]
+            R1["代理的眼"]
+            R2["只读数据"]
+            R3["URI 寻址"]
+            R4["类似 GET 请求"]
+        end
+
+        subgraph PromptsPrimitive["Prompts 提示词"]
+            P1["代理的剧本"]
+            P2["预定义模板"]
+            P3["工作流封装"]
+            P4["领域知识内嵌"]
+        end
+    end
+
+    classDef toolStyle fill:#ffcdd2,stroke:#c62828
+    classDef resourceStyle fill:#c8e6c9,stroke:#2e7d32
+    classDef promptStyle fill:#bbdefb,stroke:#1565c0
+    class T1,T2,T3,T4 toolStyle
+    class R1,R2,R3,R4 resourceStyle
+    class P1,P2,P3,P4 promptStyle`} client:load />
+
+### Tools (工具) - 代理的手
+
+<Mermaid chart={`sequenceDiagram
+    participant LLM as LLM
+    participant Client as MCP Client
+    participant Server as MCP Server
+    participant DB as Database
+
+    LLM->>Client: 决定调用工具
+    Note over LLM: 生成符合 Schema 的参数
+    Client->>Server: tools/call JSON-RPC
+    Server->>DB: 执行 SQL 操作
+    DB-->>Server: 操作结果
+    Server-->>Client: 返回结构化结果
+    Client-->>LLM: 工具执行结果`} client:load />
+
+**机制：**
+- 服务器定义工具的名称、描述和 JSON Schema 输入参数
+- 当 LLM 决定调用工具时，它会生成符合 Schema 的参数
+- 客户端将其发送给服务器执行
+
+**设计原则：**
+- 工具应当是**原子化**的
+- 在可能的情况下设计为**幂等 (Idempotent)**，以便模型在失败时重试
+
+<ExampleCode
+  title="工具定义示例"
+  language="python"
+  code={`@mcp.tool()
+def execute_sql(query: str, database: str) -> dict:
+    """
+    在指定数据库上执行 SQL 查询。
+
+    Args:
+        query: SQL 查询语句
+        database: 目标数据库名称
+
+    Returns:
+        查询结果的 JSON 格式
+    """
+    # 执行查询逻辑
+    return {"rows": [...], "affected": 10}`}
+  client:load
+/>
+
+### Resources (资源) - 代理的眼
+
+<Mermaid chart={`graph LR
+    subgraph URIExamples["资源 URI 示例"]
+        URI1["file:///logs/error.log"]
+        URI2["postgres://db/users/schema"]
+        URI3["github://issue/123"]
+        URI4["config://app-settings"]
+    end
+
+    subgraph Features["资源特性"]
+        F1["只读访问"]
+        F2["URI 寻址"]
+        F3["动态模板"]
+        F4["低延迟"]
+    end
+
+    URI1 --> F1
+    URI2 --> F2
+    URI3 --> F3
+    URI4 --> F4
+
+    classDef uriStyle fill:#e8f5e9,stroke:#4caf50
+    class URI1,URI2,URI3,URI4 uriStyle`} client:load />
+
+**关键特性：**
+- **URI 寻址**：资源通过 URI 进行标识
+- **动态模板**：服务器可以暴露资源模板（如 `github://issue/{id}`）
+- **性能优势**：使用资源而非工具来获取静态上下文可以显著降低延迟
+
+<ExampleCode
+  title="资源定义示例"
+  language="python"
+  code={`@mcp.resource("config://app-settings")
+def get_app_settings() -> str:
+    """返回当前应用程序的全局配置参数"""
+    return """
+    DEBUG=False
+    MAX_RETRIES=5
+    TIMEOUT=30s
+    API_VERSION=v2
+    """
+
+@mcp.resource("schema://database/{table_name}")
+def get_table_schema(table_name: str) -> str:
+    """返回指定表的 Schema 定义"""
+    # 动态模板，根据 table_name 返回对应 Schema
+    return get_schema_from_db(table_name)`}
+  client:load
+/>
+
+### Prompts (提示词) - 代理的剧本
+
+<Mermaid chart={`graph TB
+    subgraph PromptWorkflow["Prompt 工作流封装"]
+        P1["commit-changes 提示词"]
+
+        subgraph AutoContext["自动注入的上下文"]
+            C1["git status 资源"]
+            C2["git diff 资源"]
+            C3["代码规范文档"]
+        end
+
+        subgraph SystemInstructions["预设的系统指令"]
+            S1["你是一个严谨的代码审查者"]
+            S2["遵循 Conventional Commits"]
+            S3["检查安全漏洞"]
+        end
+    end
+
+    P1 --> C1
+    P1 --> C2
+    P1 --> C3
+    P1 --> S1
+    P1 --> S2
+    P1 --> S3
+
+    classDef promptMainStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    class P1 promptMainStyle`} client:load />
+
+**作用：**
+- 预定义的交互模板
+- 用于指导模型如何使用服务器提供的工具和资源
+- 允许服务器开发者将"领域知识"内嵌到协议中
+
+---
+
+## 通信流程详解
+
+### 完整的请求-响应流程
+
+<Mermaid chart={`sequenceDiagram
+    participant User as User
+    participant Host as MCP Host
+    participant LLM as LLM
+    participant Client as MCP Client
+    participant Server as MCP Server
+
+    Note over User,Server: 1. 初始化阶段
+    Host->>Server: 启动服务器进程
+    Client->>Server: initialize 协议握手
+    Server-->>Client: capabilities 能力声明
+    Client->>Server: initialized 确认
+
+    Note over User,Server: 2. 能力发现阶段
+    Client->>Server: tools/list
+    Server-->>Client: 工具列表 + JSON Schema
+    Client->>Server: resources/list
+    Server-->>Client: 资源列表 + URI 模板
+    Client->>Server: prompts/list
+    Server-->>Client: 提示词列表
+
+    Note over User,Server: 3. 用户交互阶段
+    User->>Host: 查询用户 123 的订单
+    Host->>LLM: 用户请求 + 可用工具列表
+    LLM->>Host: 决定调用 query_orders 工具
+    Host->>Client: 转发工具调用请求
+    Client->>Server: tools/call query_orders
+    Server-->>Client: 返回订单数据
+    Client-->>Host: 工具执行结果
+    Host->>LLM: 工具结果
+    LLM-->>Host: 生成自然语言响应
+    Host-->>User: 用户 123 有 5 个待处理订单`} client:load />
+
+### 能力协商 (Capability Negotiation)
+
+<Mermaid chart={`graph TB
+    subgraph ClientCaps["客户端能力"]
+        CC1["roots 支持"]
+        CC2["sampling 支持"]
+        CC3["experimental 功能"]
+    end
+
+    subgraph ServerCaps["服务器能力"]
+        SC1["tools 提供"]
+        SC2["resources 提供"]
+        SC3["prompts 提供"]
+        SC4["logging 支持"]
+    end
+
+    subgraph NegotiationResult["协商结果"]
+        N1["最终可用能力集"]
+    end
+
+    CC1 --> N1
+    CC2 --> N1
+    CC3 --> N1
+    SC1 --> N1
+    SC2 --> N1
+    SC3 --> N1
+    SC4 --> N1
+
+    classDef resultStyle fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    class N1 resultStyle`} client:load />
+
+---
+
+## 安全性设计
+
+### 多层安全模型
+
+<Mermaid chart={`graph TB
+    subgraph SecurityLayers["安全层级"]
+        L1["宿主层安全<br/>配置白名单、权限审批"]
+        L2["客户端层安全<br/>能力协商、消息过滤"]
+        L3["服务器层安全<br/>输入验证、PII 脱敏"]
+        L4["传输层安全<br/>TLS、OAuth 认证"]
+    end
+
+    L1 --> L2
+    L2 --> L3
+    L3 --> L4
+
+    classDef layer1 fill:#ffcdd2,stroke:#c62828
+    classDef layer2 fill:#fff9c4,stroke:#f9a825
+    classDef layer3 fill:#c8e6c9,stroke:#2e7d32
+    classDef layer4 fill:#bbdefb,stroke:#1565c0
+    class L1 layer1
+    class L2 layer2
+    class L3 layer3
+    class L4 layer4`} client:load />
+
+### 人机回环 (Human-in-the-Loop)
+
+<Mermaid chart={`sequenceDiagram
+    participant Agent as Agent
+    participant Server as MCP Server
+    participant Host as Host
+    participant User as User
+
+    Agent->>Server: tools/call delete_database
+    Server->>Host: Elicitation 请求
+    Host->>User: 服务器请求删除数据库，是否批准？
+
+    alt 用户批准
+        User-->>Host: 允许
+        Host-->>Server: 继续执行
+        Server-->>Agent: 执行结果
+    else 用户拒绝
+        User-->>Host: 拒绝
+        Host-->>Server: 操作取消
+        Server-->>Agent: 权限被拒绝
+    end`} client:load />
+
+### OAuth 认证流程（远程服务器）
+
+<Mermaid chart={`sequenceDiagram
+    participant Client as MCP Client
+    participant Server as MCP Server
+    participant Auth as Auth Server
+
+    Client->>Server: 初始连接
+    Server-->>Client: 401 + Protected Resource Metadata
+    Note over Client: 解析所需权限范围 Scopes
+
+    Client->>Auth: OAuth 授权请求
+    Auth-->>Client: 授权码
+    Client->>Auth: 交换 Access Token
+    Auth-->>Client: Access Token
+
+    Client->>Server: 请求 + Bearer Token
+    Server-->>Client: 正常响应`} client:load />
+
+---
+
+## 行业应用场景
+
+### 开发工具与 IDE 增强
+
+<Mermaid chart={`graph TB
+    subgraph IDEHosts["IDE 作为 MCP Host"]
+        VS["VS Code"]
+        Cursor["Cursor"]
+        Windsurf["Windsurf"]
+    end
+
+    subgraph MCPServers["MCP 服务器生态"]
+        GitHub["GitHub MCP<br/>Issue/PR/代码搜索"]
+        FSServer["Filesystem MCP<br/>受控文件访问"]
+        Git["Git MCP<br/>版本控制操作"]
+        NPM["NPM MCP<br/>包管理"]
+    end
+
+    subgraph EnhancedWorkflows["增强的开发工作流"]
+        W1["代码审查自动化"]
+        W2["Issue 创建与分配"]
+        W3["PR 生成与提交"]
+        W4["依赖分析"]
+    end
+
+    VS --> GitHub
+    VS --> FSServer
+    Cursor --> Git
+    Cursor --> NPM
+    Windsurf --> GitHub
+
+    GitHub --> W1
+    GitHub --> W2
+    Git --> W3
+    NPM --> W4`} client:load />
+
+### 浏览器自动化 (Playwright-MCP)
+
+<Mermaid chart={`graph TB
+    subgraph PlaywrightArch["Playwright-MCP 架构"]
+        subgraph Traditional["传统视觉方法 - 问题"]
+            V1["截图传输"]
+            V2["Token 成本高"]
+            V3["像素坐标脆弱"]
+        end
+
+        subgraph MCPApproach["MCP 创新方法 - 解决"]
+            M1["可访问性树"]
+            M2["语义化选择器"]
+            M3["结构化数据"]
+        end
+    end
+
+    V1 -.->|替代| M1
+    V2 -.->|优化| M3
+    V3 -.->|改进| M2
+
+    classDef problemStyle fill:#ffcdd2,stroke:#c62828
+    classDef solutionStyle fill:#c8e6c9,stroke:#2e7d32
+    class V1,V2,V3 problemStyle
+    class M1,M2,M3 solutionStyle`} client:load />
+
+#### Playwright-MCP 工具集
+
+| 工具名称 | 功能描述 | 关键参数 | 战略价值 |
+|----------|----------|----------|----------|
+| `playwright_navigate` | 访问指定 URL | url, waitUntil | 代理进入环境的入口 |
+| `playwright_screenshot` | 页面截图 | fullPage, selector | 仅在必要时使用（如验证 UI） |
+| `playwright_click` | 点击元素 | selector | 基于语义选择器，而非坐标 |
+| `playwright_fill` | 填写表单 | selector, value | 自动化数据录入的核心 |
+| `playwright_evaluate` | 执行 JS 代码 | script | 允许执行复杂的页面逻辑 |
+
+### 企业级数据与可观测性
+
+<Mermaid chart={`graph LR
+    subgraph DataSources["数据源"]
+        PG["PostgreSQL"]
+        SF["Snowflake"]
+        ES["Elasticsearch"]
+    end
+
+    subgraph MCPServerLayer["MCP 服务器"]
+        S1["postgres-mcp"]
+        S2["snowflake-mcp"]
+        S3["elasticsearch-mcp"]
+    end
+
+    subgraph AgentCaps["AI 代理能力"]
+        A1["自然语言查询"]
+        A2["数据分析"]
+        A3["报告生成"]
+    end
+
+    PG --> S1
+    SF --> S2
+    ES --> S3
+
+    S1 --> A1
+    S2 --> A2
+    S3 --> A3
+
+    classDef capStyle fill:#e8f5e9,stroke:#4caf50
+    class A1,A2,A3 capStyle`} client:load />
+
+---
+
+## 技术选型决策框架
+
+### MCP vs CLI vs Native Skill
+
+<Mermaid chart={`graph TB
+    subgraph DecisionTree["决策树"]
+        Q1{"需要连接外部系统?"}
+        Q2{"结构化数据交互?"}
+        Q3{"需要跨平台复用?"}
+        Q4{"临时性操作?"}
+        Q5{"平台特定功能?"}
+
+        R1["使用 MCP"]
+        R2["使用 CLI<br/>需沙箱"]
+        R3["使用 Native Skill"]
+    end
+
+    Q1 -->|是| Q2
+    Q1 -->|否| Q4
+    Q2 -->|是| Q3
+    Q2 -->|否| R2
+    Q3 -->|是| R1
+    Q3 -->|否| Q5
+    Q4 -->|是| R2
+    Q4 -->|否| Q5
+    Q5 -->|是| R3
+    Q5 -->|否| R1
+
+    classDef mcpStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    classDef cliStyle fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    classDef skillStyle fill:#bbdefb,stroke:#1565c0,stroke-width:2px
+    class R1 mcpStyle
+    class R2 cliStyle
+    class R3 skillStyle`} client:load />
+
+### 决策矩阵
+
+| 评估维度 | MCP | CLI / Shell | Native Skill |
+|----------|-----|-------------|--------------|
+| **核心适用场景** | 系统集成与领域建模 | 临时性运维操作 | 轻量级逻辑扩展 |
+| **数据交互格式** | 强类型 (JSON Schema) | 非结构化文本 | JSON |
+| **安全性与管控** | 高 (沙箱化) | 低 (高风险) | 中 |
+| **上下文管理** | 主动式 (Resources) | 被动式 | 无 |
+| **生态复用性** | 通用跨平台 | 环境依赖 | 平台锁定 |
+
+### 何时使用 MCP？
+
+**黄金法则：当你需要构建一个"领域桥梁"时，请使用 MCP。**
+
+✅ **适用场景：**
+- 连接具有独立逻辑、数据结构和状态的外部系统
+- 数据库、Git 仓库、云平台或复杂的内部 API
+- 需要跨多个 AI 客户端复用的能力
+
+❌ **不适用场景：**
+- 简单的单行修复
+- 纯计算任务
+- 平台特定功能
+
+---
+
+## 开发实战
+
+### 使用 FastMCP (Python) 开发服务器
+
+<ExampleCode
+  title="完整的 MCP 服务器示例"
+  language="python"
+  code={`from mcp.server.fastmcp import FastMCP
+
+# 1. 初始化服务器
+mcp = FastMCP("corporate-data-service")
+
+# 2. 定义工具 (Tool) - 用于执行动作
+@mcp.tool()
+def query_customer_status(customer_id: str) -> dict:
+    """
+    根据客户 ID 查询内部数据库中的客户状态。
+    返回包含状态、等级和最近活跃时间的字典。
+    """
+    return {
+        "id": customer_id,
+        "status": "active",
+        "tier": "enterprise",
+        "last_login": "2025-02-15"
+    }
+
+@mcp.tool()
+def send_notification(user_id: str, message: str, channel: str = "email") -> dict:
+    """
+    向指定用户发送通知。
+
+    Args:
+        user_id: 用户ID
+        message: 通知内容
+        channel: 通知渠道 (email/sms/push)
+    """
+    # 执行发送逻辑
+    return {"success": True, "notification_id": "notif_12345"}
+
+# 3. 定义资源 (Resource) - 用于提供上下文
+@mcp.resource("config://app-settings")
+def get_app_settings() -> str:
+    """返回当前应用程序的全局配置参数"""
+    return "DEBUG=False\\nMAX_RETRIES=5\\nTIMEOUT=30s"
+
+@mcp.resource("schema://users")
+def get_users_schema() -> str:
+    """返回用户表的 Schema 定义"""
+    return """
+    CREATE TABLE users (
+        id UUID PRIMARY KEY,
+        email VARCHAR(255) UNIQUE,
+        name VARCHAR(100),
+        created_at TIMESTAMP
+    );
+    """
+
+# 4. 定义提示词 (Prompt) - 用于工作流封装
+@mcp.prompt()
+def analyze_customer(customer_id: str) -> str:
+    """分析客户行为并生成报告的提示词模板"""
+    return f"""
+    请分析客户 {customer_id} 的行为数据，包括：
+    1. 登录频率
+    2. 购买历史
+    3. 支持工单记录
+
+    生成一份简洁的客户健康度报告。
+    """
+
+# 5. 启动服务器
+if __name__ == "__main__":
+    mcp.run()`}
+  client:load
+/>
+
+### 客户端配置
+
+<ExampleCode
+  title="Claude Desktop 配置示例"
+  language="json"
+  code={`{
+  "mcpServers": {
+    "corporate-data": {
+      "command": "python",
+      "args": ["/path/to/corporate_data_server.py"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/username/projects",
+        "/Users/username/documents"
+      ]
+    }
+  }
+}`}
+  client:load
+/>
+
+### 配置文件位置
+
+| 操作系统 | 配置文件路径 |
+|----------|--------------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Linux | `~/.config/claude/claude_desktop_config.json` |
+
+---
+
+## 调试与验证
+
+### MCP Inspector
+
+MCP 生态提供了 **MCP Inspector**，这是一个可视化的调试工具：
+
+```bash
+# 安装并启动 MCP Inspector
+npx @modelcontextprotocol/inspector python /path/to/your_server.py
+```
+
+**功能：**
+- 手动发送 JSON-RPC 请求
+- 测试工具和资源
+- 查看请求响应的详细 Payload
+- 排查 Schema 错误或逻辑 Bug
+
+### 日志最佳实践
+
+<ExampleCode
+  title="正确的日志处理"
+  language="python"
+  code={`import logging
+import sys
+
+# 配置日志输出到 stderr（不是 stdout！）
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr  # 关键：使用 stderr
+)
+
+logger = logging.getLogger("my-mcp-server")
+
+# 在 STDIO 模式下，切勿使用 print()！
+# 因为 stdout 用于 JSON-RPC 消息流
+logger.info("服务器启动成功")  # 正确
+# print("服务器启动成功")      # 错误：会破坏消息流`}
+  client:load
+/>
+
+---
+
+## 进阶模式：代码执行替代工具调用
+
+当处理大规模数据时（如分析一个 100MB 的 CSV 文件），直接调用 MCP 工具并将数据传回给 LLM 会瞬间撑爆上下文窗口。
+
+<Mermaid chart={`sequenceDiagram
+    participant LLM as LLM
+    participant MCP as Python MCP
+    participant Data as 100MB CSV
+
+    Note over LLM,Data: 传统方式 - 问题
+    LLM->>MCP: read_csv
+    MCP->>Data: 读取
+    Data-->>MCP: 100MB 数据
+    MCP--xLLM: 上下文溢出
+
+    Note over LLM,Data: 代码执行模式 - 解决
+    LLM->>MCP: execute_code 分析脚本
+    MCP->>Data: 读取 + 本地处理
+    Data-->>MCP: 100MB 数据
+    Note over MCP: 在服务器端执行分析
+    MCP-->>LLM: 只返回 5 行结果`} client:load />
+
+**策略：**
+1. 让 LLM 编写分析脚本
+2. 通过 MCP 的代码执行工具在服务器端运行
+3. 仅返回高价值的"洞察"
+
+---
+
+## 2025 路线图与未来展望
+
+### Agentic AI Foundation
+
+2025 年，Anthropic 将 MCP 捐赠给 Linux 基金会并成立 **Agentic AI Foundation (AAIF)**。创始成员包括 OpenAI、Google、Block 等行业巨头。
+
+<Mermaid chart={`graph LR
+    subgraph Timeline2024["2024"]
+        E1["Anthropic 发布 MCP"]
+        E2["Claude Desktop 首次支持"]
+    end
+
+    subgraph Timeline2025Q1["2025 Q1"]
+        E3["捐赠给 Linux Foundation"]
+        E4["成立 Agentic AI Foundation"]
+    end
+
+    subgraph Timeline2025Q2["2025 Q2"]
+        E5["远程服务注册中心"]
+        E6["类似 npm/Docker Hub"]
+    end
+
+    subgraph Timeline2025Q3["2025 Q3-Q4"]
+        E7["代理对代理通信"]
+        E8["状态流支持"]
+    end
+
+    E1 --> E2
+    E2 --> E3
+    E3 --> E4
+    E4 --> E5
+    E5 --> E6
+    E6 --> E7
+    E7 --> E8`} client:load />
+
+### 即将推出的特性
+
+| 特性 | 描述 |
+|------|------|
+| **远程服务注册中心** | 类似 npm，一键安装"Salesforce 连接器" |
+| **代理对代理通信** | 编码代理直接请求数据库代理提供 Schema |
+| **状态流** | 服务器推送长运行任务进度 |
+| **代理原生基础设施** | API 自动生成 MCP 接口 |
+
+---
+
+## 总结
+
+**MCP 的出现是 AI 工程化领域的一个分水岭。** 它结束了 LLM 集成的蛮荒时代，用一套标准化的语言统一了模型与世界的交互方式。
+
+### 核心要点
+
+1. **三层架构**：Host → Client → Server，职责分离
+2. **三大原语**：Tools（执行）、Resources（数据）、Prompts（模板）
+3. **两种传输**：STDIO（本地）、HTTP/SSE（远程）
+4. **安全优先**：人机回环、OAuth 认证、PII 脱敏
+
+### 最佳实践
+
+- ✅ **MCP 优先**：构建领域桥梁时首选
+- ⚠️ **慎用 CLI**：仅限受控环境的临时操作
+- 📱 **善用 Native Skill**：平台特定的轻量级扩展
+- 🔐 **严格实施人机回环**：敏感操作必须用户审批
+
+---
+
+## 参考资源
+
+- [MCP 官方文档](https://modelcontextprotocol.io)
+- [MCP GitHub 仓库](https://github.com/modelcontextprotocol)
+- [FastMCP Python SDK](https://github.com/jlowin/fastmcp)
+- [Playwright MCP](https://github.com/microsoft/playwright-mcp)
+- [Agentic AI Foundation](https://agenticaifoundation.org)
+
+---
+
+*本文档基于 MCP 2025 规范编写，内容会随协议演进持续更新。*

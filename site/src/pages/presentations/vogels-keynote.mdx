@@ -1,0 +1,196 @@
+---
+layout: ../../layouts/PresentationLayout.astro
+title: Werner Vogels - The Renaissance Developer
+description: AWS re:Invent 2024 Keynote - 探讨 AI 时代开发者应具备的五大特质
+category: 技术分享
+---
+
+import PresentationCarousel from '../../components/presentations/PresentationCarousel';
+import { getUrl } from '../../utils/url';
+
+# Werner Vogels - The Renaissance Developer
+
+AWS CTO Werner Vogels 在 re:Invent 2025 的主题演讲，探讨在 AI 时代，开发者应该如何成为"文艺复兴式开发者"。
+
+<PresentationCarousel
+  client:load
+  title="The Renaissance Developer"
+  slides={[
+    {
+      image: "/slides/vogels-keynote/00-1.jpg",
+      alt: "开场 - 回到未来风格",
+      caption: "开场动画 - 致敬《回到未来》"
+    },
+    {
+      image: "/slides/vogels-keynote/00-2.jpg",
+      alt: "Back to the Beginning",
+      caption: "Back to the Beginning - 回到起点"
+    },
+    {
+      image: "/slides/vogels-keynote/00-3.jpg",
+      alt: "Keep Calm and Carry On Coding",
+      caption: "Keep Calm and Carry On {Coding}"
+    },
+    {
+      image: "/slides/vogels-keynote/00-4.jpg",
+      alt: "The work is yours, not the tool's",
+      caption: "核心观点：工作是你的，不是工具的"
+    },
+    {
+      image: "/slides/vogels-keynote/01-1.jpg",
+      alt: "特质一：保持好奇",
+      caption: "Renaissance Developer 特质 #1: Is Curious - 保持好奇心"
+    },
+    {
+      image: "/slides/vogels-keynote/01-2.jpg",
+      alt: "好奇心详解",
+      caption: "好奇心驱动创新与学习"
+    },
+    {
+      image: "/slides/vogels-keynote/01-3.jpg",
+      alt: "好奇心实践",
+      caption: "在实践中培养好奇心"
+    },
+    {
+      image: "/slides/vogels-keynote/02-1.jpg",
+      alt: "特质二：系统思维",
+      caption: "Renaissance Developer 特质 #2: Thinks in Systems - 系统性思考"
+    },
+    {
+      image: "/slides/vogels-keynote/02-2.jpg",
+      alt: "系统思维详解",
+      caption: "理解系统的整体架构"
+    },
+    {
+      image: "/slides/vogels-keynote/02-3.jpg",
+      alt: "系统思维案例",
+      caption: "系统思维的实际应用"
+    },
+    {
+      image: "/slides/vogels-keynote/02-4.jpg",
+      alt: "系统思维总结",
+      caption: "从全局视角看待问题"
+    },
+    {
+      image: "/slides/vogels-keynote/03-1.jpg",
+      alt: "特质三：善于沟通",
+      caption: "Renaissance Developer 特质 #3: Communicates - 善于沟通"
+    },
+    {
+      image: "/slides/vogels-keynote/03-2.jpg",
+      alt: "沟通的重要性",
+      caption: "沟通是开发者的核心技能"
+    },
+    {
+      image: "/slides/vogels-keynote/03-3.jpg",
+      alt: "沟通技巧",
+      caption: "有效沟通的方法"
+    },
+    {
+      image: "/slides/vogels-keynote/03-4.jpg",
+      alt: "团队沟通",
+      caption: "团队协作中的沟通"
+    },
+    {
+      image: "/slides/vogels-keynote/03-5.jpg",
+      alt: "技术沟通",
+      caption: "技术文档与表达"
+    },
+    {
+      image: "/slides/vogels-keynote/03-6.jpg",
+      alt: "跨团队沟通",
+      caption: "跨职能团队的协作"
+    },
+    {
+      image: "/slides/vogels-keynote/03-7.jpg",
+      alt: "沟通总结",
+      caption: "沟通能力的提升"
+    },
+    {
+      image: "/slides/vogels-keynote/04-1.jpg",
+      alt: "特质四：主人翁意识",
+      caption: "Renaissance Developer 特质 #4: Is an Owner - 主人翁意识"
+    },
+    {
+      image: "/slides/vogels-keynote/04-2.jpg",
+      alt: "Ownership 详解",
+      caption: "对代码和产品负责"
+    },
+    {
+      image: "/slides/vogels-keynote/04-3.jpg",
+      alt: "Ownership 实践",
+      caption: "端到端的责任感"
+    },
+    {
+      image: "/slides/vogels-keynote/04-4.jpg",
+      alt: "Ownership 文化",
+      caption: "培养 Ownership 文化"
+    },
+    {
+      image: "/slides/vogels-keynote/04-5.jpg",
+      alt: "Ownership 案例",
+      caption: "Ownership 的实际体现"
+    },
+    {
+      image: "/slides/vogels-keynote/04-6.jpg",
+      alt: "Ownership 总结",
+      caption: "成为真正的 Owner"
+    },
+    {
+      image: "/slides/vogels-keynote/05-1.jpg",
+      alt: "特质五：博学多才",
+      caption: "Renaissance Developer 特质 #5: Is a Polymath - 博学多才"
+    },
+    {
+      image: "/slides/vogels-keynote/05-2.jpg",
+      alt: "Polymath 详解",
+      caption: "跨领域的知识积累"
+    },
+    {
+      image: "/slides/vogels-keynote/05-3.jpg",
+      alt: "Polymath 技能",
+      caption: "多元化的技能树"
+    },
+    {
+      image: "/slides/vogels-keynote/05-4.jpg",
+      alt: "Polymath 学习",
+      caption: "持续学习的心态"
+    },
+    {
+      image: "/slides/vogels-keynote/05-5.jpg",
+      alt: "Polymath 应用",
+      caption: "跨界知识的融合"
+    },
+    {
+      image: "/slides/vogels-keynote/05-6.jpg",
+      alt: "Polymath 总结",
+      caption: "成为文艺复兴式开发者"
+    },
+    {
+      image: "/slides/vogels-keynote/06-1.jpg",
+      alt: "五大特质总结",
+      caption: "Renaissance Developer 的五大特质总结"
+    },
+    {
+      image: "/slides/vogels-keynote/06-2.jpg",
+      alt: "结语",
+      caption: "Your best work is hidden - 最好的工作是无形的"
+    }
+  ]}
+/>
+
+## 核心要点
+
+Werner Vogels 提出的 Renaissance Developer（文艺复兴式开发者）具备五大特质：
+
+1. **Is Curious** - 保持好奇心，不断探索新技术
+2. **Thinks in Systems** - 系统性思考，理解整体架构
+3. **Communicates** - 善于沟通，有效传达想法
+4. **Is an Owner** - 主人翁意识，对产品负责
+5. **Is a Polymath** - 博学多才，跨领域学习
+
+## 延伸阅读
+
+- [查看课程大纲](/curriculum) - 了解 AI 编程训练营完整内容
+- [探索工具生态](/tools) - 学习 AI 编程工具的使用
+- [浏览学习资料](/materials) - 获取更多技术学习资源

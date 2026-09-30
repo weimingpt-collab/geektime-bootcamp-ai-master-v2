@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: projectalpha_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install backend dependencies
+        working-directory: ./w1/project-alpha/backend
+        run: |
+          uv sync --dev
+          # Verify installation
+          uv pip list
+
+      - name: Run database migrations
+        working-directory: ./w1/project-alpha/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/projectalpha_test
+        run: |
+          uv run alembic upgrade head
+
+      - name: Run backend tests
+        working-directory: ./w1/project-alpha/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/projectalpha_test
+        run: |
+          uv run pytest -v --cov=app --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          file: ./w1/project-alpha/backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  backend-lint:
+    name: Backend Linting
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install backend dependencies
+        working-directory: ./w1/project-alpha/backend
+        run: |
+          uv sync --dev
+          # Verify installation
+          uv pip list
+
+      - name: Run Black
+        working-directory: ./w1/project-alpha/backend
+        run: |
+          uvx black --check --diff app/ tests/
+
+      - name: Run isort
+        working-directory: ./w1/project-alpha/backend
+        run: |
+          uvx isort --check --diff app/ tests/
+
+      - name: Run mypy
+        working-directory: ./w1/project-alpha/backend
+        continue-on-error: true
+        run: |
+          uv run --with mypy mypy app/
+
+  frontend-lint:
+    name: Frontend Linting
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          cache-dependency-path: w1/project-alpha/frontend/yarn.lock
+
+      - name: Install frontend dependencies
+        working-directory: ./w1/project-alpha/frontend
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: Run ESLint
+        working-directory: ./w1/project-alpha/frontend
+        run: |
+          yarn lint
+
+      - name: Run TypeScript type check
+        working-directory: ./w1/project-alpha/frontend
+        run: |
+          yarn tsc --noEmit
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          cache-dependency-path: w1/project-alpha/frontend/yarn.lock
+
+      - name: Install frontend dependencies
+        working-directory: ./w1/project-alpha/frontend
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: ./w1/project-alpha/frontend
+        run: |
+          yarn build
+
+  pre-commit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          cache-dependency-path: w1/project-alpha/frontend/yarn.lock
+
+      - name: Install pre-commit
+        run: |
+          pip install pre-commit
+
+      - name: Install backend dependencies
+        working-directory: ./w1/project-alpha/backend
+        run: |
+          uv sync --dev
+
+      - name: Install frontend dependencies
+        working-directory: ./w1/project-alpha/frontend
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: Run pre-commit
+        run: |
+          pre-commit run --all-files

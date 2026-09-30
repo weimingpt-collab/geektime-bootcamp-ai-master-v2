@@ -1,0 +1,273 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import PageHeader from "../components/ui/PageHeader";
+import FeatureCard from "../components/ui/FeatureCard";
+import ScrollReveal from "../components/ui/ScrollReveal";
+import ExpandableSection from "../components/ui/ExpandableSection";
+import { getUrl } from "../utils/url";
+---
+
+<PageLayout
+  title="关于课程 - 陈天 AI 训练营"
+  description="深入了解课程价值、适合人群和学习收获"
+>
+  <PageHeader
+    title="关于课程"
+    subtitle="AI 辅助编程的系统化学习之旅"
+    client:load
+  >
+    <div class="md-cta-stack justify-center">
+      <a href={getUrl("curriculum")} class="md-btn"> 查看课程大纲 </a>
+      <a href="#value" class="md-btn md-btn-secondary"> 了解课程价值 </a>
+    </div>
+  </PageHeader>
+
+  <section
+    id="value"
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-ink mb-6">课程价值</h2>
+        <p
+          class="text-center mb-12 max-w-2xl mx-auto text-body text-slate"
+          style="line-height: 1.6;"
+        >
+          为什么选择这门课程？
+        </p>
+      </ScrollReveal>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
+        <FeatureCard
+          icon="🎯"
+          title="系统化学习路径"
+          description="8周循序渐进，从基础工具到 Agent 开发，构建完整的知识体系"
+          delay={0}
+          client:load
+        />
+        <FeatureCard
+          icon="💼"
+          title="实战项目导向"
+          description="5个真实项目，覆盖前后端全栈开发，积累实战经验"
+          delay={0.1}
+          client:load
+        />
+        <FeatureCard
+          icon="🛠️"
+          title="掌握前沿工具"
+          description="深入学习 Cursor、Claude Code、MCP 等最新 AI 工具"
+          delay={0.2}
+          client:load
+        />
+        <FeatureCard
+          icon="🚀"
+          title="效率倍增"
+          description="学会用 AI 辅助编程，开发效率提升 5-10 倍"
+          delay={0.3}
+          client:load
+        />
+      </div>
+    </div>
+  </section>
+
+  <section
+    id="audience"
+    class="md-section"
+    style="background-color: var(--md-soft-blue); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container max-w-4xl">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-ink mb-6">适合人群</h2>
+        <p
+          class="text-center mb-12 text-body text-slate"
+          style="line-height: 1.6;"
+        >
+          这门课程为谁准备？
+        </p>
+      </ScrollReveal>
+
+      <div class="flex flex-col gap-6">
+        <ExpandableSection title="🧑‍💻 在职开发者" client:load>
+          <p class="mb-4 text-body text-slate">
+            如果你是一名工作中的程序员，希望提升开发效率，掌握最新的 AI
+            辅助工具，这门课程将帮助你：
+          </p>
+          <ul class="flex flex-col gap-1 text-body text-slate">
+            <li>• 大幅提升日常编码效率</li>
+            <li>• 快速理解和维护大型代码库</li>
+            <li>• 自动化重复性的开发任务</li>
+            <li>• 在职场中保持技术竞争力</li>
+          </ul>
+        </ExpandableSection>
+
+        <ExpandableSection title="🎓 编程初学者" client:load>
+          <p class="mb-4 text-body text-slate">
+            如果你刚开始学习编程，AI 工具能帮助你更快地入门和成长：
+          </p>
+          <ul class="flex flex-col gap-1 text-body text-slate">
+            <li>• 降低编程学习曲线</li>
+            <li>• 实时获得代码建议和错误修复</li>
+            <li>• 快速搭建项目原型</li>
+            <li>• 从 AI 的辅助中学习最佳实践</li>
+          </ul>
+        </ExpandableSection>
+
+        <ExpandableSection title="🏢 技术管理者" client:load>
+          <p class="mb-4 text-body text-slate">
+            如果你是技术 Leader 或 CTO，了解 AI 辅助开发将帮助你：
+          </p>
+          <ul class="flex flex-col gap-1 text-body text-slate">
+            <li>• 评估和引入 AI 工具到团队</li>
+            <li>• 提升团队整体开发效率</li>
+            <li>• 制定 AI 时代的技术战略</li>
+            <li>• 培养团队的 AI 应用能力</li>
+          </ul>
+        </ExpandableSection>
+
+        <ExpandableSection title="💡 产品经理" client:load>
+          <p class="mb-4 text-body text-slate">
+            如果你是产品经理，了解 AI 辅助开发能帮助你：
+          </p>
+          <ul class="flex flex-col gap-1 text-body text-slate">
+            <li>• 更好地理解技术可行性</li>
+            <li>• 快速验证产品创意</li>
+            <li>• 与工程团队更有效沟通</li>
+            <li>• 甚至自己动手实现简单原型</li>
+          </ul>
+        </ExpandableSection>
+      </div>
+    </div>
+  </section>
+
+  <section
+    id="prerequisites"
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container max-w-4xl">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-ink mb-6">入学要求</h2>
+        <p
+          class="text-center mb-12 text-body text-slate"
+          style="line-height: 1.6;"
+        >
+          开始学习前，你需要具备...
+        </p>
+      </ScrollReveal>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div class="md-card p-space-8">
+          <h3 class="text-h3 font-semibold text-ink mb-5">必备技能</h3>
+          <ul class="flex flex-col gap-3 text-body text-slate">
+            <li class="flex gap-3">
+              <span class="text-garden">✓</span>
+              <span>基础的编程概念（变量、函数、条件、循环）</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-garden">✓</span>
+              <span>能够阅读和理解简单的代码</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-garden">✓</span>
+              <span>基本的命令行操作</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="md-card p-space-8">
+          <h3 class="text-h3 font-semibold text-ink mb-5">加分项</h3>
+          <ul class="flex flex-col gap-3 text-body text-slate">
+            <li class="flex gap-3">
+              <span class="text-sky">+</span>
+              <span>有过项目开发经验</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-sky">+</span>
+              <span>了解 JavaScript/TypeScript</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-sky">+</span>
+              <span>使用过 Git 版本控制</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div
+        class="md-card text-center mt-10 p-space-8"
+        style="background-color: var(--md-sunbeam);"
+      >
+        <p class="text-body text-ink" style="line-height: 1.6;">
+          <strong>不用担心！</strong> 即使你是完全的新手，课程中的 AI 工具也会帮助你快速上手。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section
+    id="instructor"
+    class="md-section"
+    style="background-color: var(--md-sky); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container max-w-4xl">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-graphite mb-12">
+          讲师介绍
+        </h2>
+      </ScrollReveal>
+
+      <div
+        class="flex flex-col md:flex-row gap-10 items-center md-card p-space-10"
+      >
+        <div class="md:w-1/3">
+          <div class="w-48 h-48 mx-auto overflow-hidden rounded-none shadow-xl">
+            <img
+              src={getUrl("images/instructor/chen-tian.jpg")}
+              alt="陈天讲师"
+              class="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+        <div class="md:w-2/3">
+          <h3 class="text-h2 font-bold text-ink mb-4">陈天</h3>
+          <p class="mb-4 text-body text-slate">
+            资深技术专家，AI 技术布道者，在系统架构、编程语言和 AI
+            应用领域有深厚积累。
+          </p>
+          <p class="mb-4 text-body text-slate">
+            极客时间多门热门课程讲师，帮助数万名开发者提升技术能力。在 AI
+            辅助编程领域有丰富的实践经验，擅长将复杂技术简化为易于理解的学习路径。
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <span class="md-badge text-ui"> 系统架构 </span>
+            <span class="md-badge text-ui"> AI 应用 </span>
+            <span class="md-badge text-ui"> 技术写作 </span>
+            <span class="md-badge text-ui"> 开发者教育 </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="md-section"
+    style="background-color: var(--md-cream); padding-top: var(--space-12); padding-bottom: var(--space-12);"
+  >
+    <div class="md-container text-center">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-ink mb-10">准备好开始了吗？</h2>
+        <p
+          class="text-h3 mb-10 max-w-2xl mx-auto text-slate"
+          style="line-height: 1.5;"
+        >
+          加入我们，开启 AI 辅助编程的学习之旅
+        </p>
+        <div class="md-cta-stack justify-center">
+          <a href={getUrl("curriculum")} class="md-btn"> 查看课程大纲 </a>
+          <a href={getUrl("")} class="md-btn md-btn-secondary"> 返回首页 </a>
+        </div>
+      </ScrollReveal>
+    </div>
+  </section>
+</PageLayout>

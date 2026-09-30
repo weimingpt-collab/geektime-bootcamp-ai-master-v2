@@ -1,0 +1,236 @@
+---
+import PageLayout from "../layouts/PageLayout.astro";
+import Hero from "../components/ui/Hero";
+import FeatureCard from "../components/ui/FeatureCard";
+import AnimatedNumber from "../components/ui/AnimatedNumber";
+import ScrollReveal from "../components/ui/ScrollReveal";
+import Timeline from "../components/course/Timeline";
+import ProjectCard from "../components/projects/ProjectCard";
+import { getTimelineData } from "../data/curriculum";
+import { projects } from "../data/projects";
+import { getUrl, getImageUrl } from "../utils/url";
+
+const timelineData = getTimelineData();
+const featuredProjects = projects.slice(0, 3);
+---
+
+<PageLayout>
+  <Hero
+    title="陈天的极客时间 AI 训练营"
+    subtitle="让 AI 成为你的编程超能力"
+    backgroundImage={getImageUrl("images/hero/hero-bg.jpg")}
+    client:load
+  >
+    <div class="md-cta-stack justify-center">
+      <a href={getUrl("curriculum")} class="md-btn"> 立即开始 </a>
+      <a href={getUrl("about")} class="md-btn md-btn-secondary"> 了解更多 </a>
+    </div>
+  </Hero>
+
+  <section class="md-section">
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 text-center text-ink mb-9 font-bold">
+          课程核心价值
+        </h2>
+      </ScrollReveal>
+      <div class="grid grid-cols-1 gap-10 md:grid-cols-3">
+        <FeatureCard
+          icon="⚡"
+          title="高效开发"
+          description="利用 AI 工具大幅提升编程效率，让开发工作事半功倍"
+          delay={0}
+          client:load
+        />
+        <FeatureCard
+          icon="🤖"
+          title="智能辅助"
+          description="掌握最前沿的 AI 辅助编程工具和最佳实践"
+          delay={0.1}
+          client:load
+        />
+        <FeatureCard
+          icon="🚀"
+          title="实战导向"
+          description="通过 5 个真实项目，从零到一掌握 AI 编程技能"
+          delay={0.2}
+          client:load
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="md-section md-section--sky">
+    <div class="md-container text-center">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 text-ink font-bold mb-8">学习收益</h2>
+      </ScrollReveal>
+      <div class="mx-auto grid max-w-4xl grid-cols-2 gap-10 md:grid-cols-4">
+        <div>
+          <AnimatedNumber
+            to={8}
+            suffix=" 周"
+            className="text-h2 font-bold text-sky mb-3"
+            client:load
+          />
+          <div class="text-body text-slate">课程</div>
+        </div>
+        <div>
+          <AnimatedNumber
+            to={5}
+            suffix=" 个"
+            className="text-h2 font-bold text-sky mb-3"
+            client:load
+          />
+          <div class="text-body text-slate">项目</div>
+        </div>
+        <div>
+          <AnimatedNumber
+            to={10}
+            suffix="+"
+            className="text-h2 font-bold text-sky mb-3"
+            client:load
+          />
+          <div class="text-body text-slate">工具</div>
+        </div>
+        <div>
+          <div class="text-h2 font-bold text-sky mb-3">∞</div>
+          <div class="text-body text-slate">可能性</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="md-section">
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-ink mb-5">8周学习路径</h2>
+        <p class="mx-auto max-w-2xl text-center text-body text-slate mb-9">
+          系统化的课程设计，从 AI 编码入门到 Agent 开发精通
+        </p>
+      </ScrollReveal>
+      <Timeline items={timelineData.slice(0, 4)} client:load />
+      <div class="text-center mt-8">
+        <a href={getUrl("curriculum")} class="md-btn"> 查看完整课程大纲 </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="md-section md-section--sky">
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-ink mb-5">实战项目</h2>
+        <p class="mx-auto max-w-2xl text-center text-body text-slate mb-9">
+          从简单到复杂，每个项目都对应特定的学习目标
+        </p>
+      </ScrollReveal>
+      <div class="grid grid-cols-1 gap-10 md:grid-cols-3 mb-8">
+        {
+          featuredProjects.map((project) => (
+            <ProjectCard
+              number={project.number}
+              title={project.title}
+              subtitle={project.subtitle}
+              difficulty={project.difficulty}
+              estimatedHours={project.estimatedHours}
+              techStack={project.techStack}
+              client:load
+            />
+          ))
+        }
+      </div>
+      <div class="text-center">
+        <a href={getUrl("projects")} class="md-btn md-btn-secondary">
+          查看所有项目
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="md-section">
+    <div class="md-container">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-center text-ink mb-5">学习资料</h2>
+        <p class="mx-auto max-w-2xl text-center text-body text-slate mb-8">
+          深度技术文章、架构分析、工具对比，全面掌握 AI 辅助编程
+        </p>
+      </ScrollReveal>
+      <div class="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4 mb-10">
+        <a
+          href={getUrl("materials/claude-code-architecture")}
+          class="md-card md-card-interactive group"
+        >
+          <div class="text-4xl mb-4">🏗️</div>
+          <h4
+            class="text-h3 font-bold text-ink mb-3 transition-colors group-hover:text-sky"
+          >
+            Claude Code 架构
+          </h4>
+          <p class="text-body text-slate m-0">16个System Prompts深度分析</p>
+        </a>
+        <a
+          href={getUrl("materials/speckit-intro")}
+          class="md-card md-card-interactive group"
+        >
+          <div class="text-4xl mb-4">💫</div>
+          <h4
+            class="text-h3 font-bold text-ink mb-3 transition-colors group-hover:text-sky"
+          >
+            SpecKit 完整指南
+          </h4>
+          <p class="text-body text-slate m-0">规范驱动开发从入门到精通</p>
+        </a>
+        <a
+          href={getUrl("materials/notebooklm-guide")}
+          class="md-card md-card-interactive group"
+        >
+          <div class="text-4xl mb-4">📚</div>
+          <h4
+            class="text-h3 font-bold text-ink mb-3 transition-colors group-hover:text-sky"
+          >
+            NotebookLM 指南
+          </h4>
+          <p class="text-body text-slate m-0">1M上下文知识管理</p>
+        </a>
+        <a
+          href={getUrl("materials/ai-coding-tools-comparison")}
+          class="md-card md-card-interactive group"
+        >
+          <div class="text-4xl mb-4">🔧</div>
+          <h4
+            class="text-h3 font-bold text-ink mb-3 transition-colors group-hover:text-sky"
+          >
+            工具全景对比
+          </h4>
+          <p class="text-body text-slate m-0">Cursor vs Claude Code 深度分析</p>
+        </a>
+      </div>
+      <div class="text-center">
+        <a href={getUrl("materials")} class="md-btn md-btn-secondary">
+          浏览全部资料
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="md-section md-section--sky">
+    <div class="md-container text-center">
+      <ScrollReveal client:load>
+        <h2 class="text-h2 font-bold text-ink mb-8">
+          准备好开始你的 AI 编程之旅了吗？
+        </h2>
+        <p class="mx-auto max-w-2xl text-body text-slate mb-8">
+          立即开始第一周课程，体验 AI 辅助编程的强大力量
+        </p>
+        <div class="md-cta-stack justify-center">
+          <a href={getUrl("curriculum/week-1")} class="md-btn">
+            开始第一周课程
+          </a>
+          <a href={getUrl("about")} class="md-btn md-btn-secondary">
+            了解课程详情
+          </a>
+        </div>
+      </ScrollReveal>
+    </div>
+  </section>
+</PageLayout>

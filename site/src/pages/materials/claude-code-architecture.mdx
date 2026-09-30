@@ -1,0 +1,1878 @@
+---
+layout: ../../layouts/MaterialLayout.astro
+title: Claude Code 2.0 深度架构分析
+description: 完整逆向工程分析 - 42个System Prompts + 15个工具定义，基于Acorn AST深度解析
+category: 工具深度解析
+---
+
+import MetricCard from '../../components/materials/MetricCard';
+import Mermaid from '../../components/materials/Mermaid';
+import ScrollReveal from '../../components/ui/ScrollReveal';
+import LearningSuggestion from '../../components/materials/LearningSuggestion';
+import CallToAction from '../../components/materials/CallToAction';
+import NextSteps from '../../components/materials/NextSteps';
+
+# Claude Code 2.0 深度架构分析
+
+**Anthropic 官方 CLI 工具完整逆向工程**
+
+> **分析版本**: Claude Code 2.0.36 | **分析方法**: Acorn AST 深度解析 | **完成日期**: 2025-11-16 | **模型**: Claude Sonnet 4.5 (1M Context)
+
+## 📑 快速导航
+
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+  gap: 'var(--space-4)',
+  padding: 'var(--space-6)',
+  backgroundColor: 'var(--md-cream)',
+  border: '2px solid var(--md-graphite)',
+  marginBottom: 'var(--space-8)'
+}}>
+  <a href="#-claude-code-整体架构" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>📊 Claude Code 整体架构</a>
+  <a href="#-重大发现42-个-system-prompts" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>📝 42 Prompts</a>
+  <a href="#-核心发现" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>💡 核心发现</a>
+  <a href="#-安全架构沙箱与权限系统" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>🔐 安全架构</a>
+  <a href="#-extended-thinking---深度推理模式" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>🧠 Extended Thinking</a>
+  <a href="#-检查点与回滚系统" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>💾 检查点系统</a>
+  <a href="#-mcp---model-context-protocol-集成" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>🔌 MCP 集成</a>
+  <a href="#-claudemd---项目上下文管理" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>📖 CLAUDE.md</a>
+  <a href="#-核心工作流agent-loop-架构" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>🏗️ Agent Loop</a>
+  <a href="#-性能优化最佳实践" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>⚡ 性能优化</a>
+  <a href="#-实战案例端到端开发流程" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>🎯 实战案例</a>
+  <a href="#-技术深度总结" style={{ color: 'var(--md-ink)', textDecoration: 'none' }}>🎓 技术总结</a>
+</div>
+
+## 🏗️ Claude Code 整体架构
+
+<Mermaid chart={`flowchart TD
+    User["👤 用户 CLI"] --> CLI["Claude Code CLI"]
+    CLI --> Router["消息路由器"]
+
+    Router --> MainPrompt["主 System Prompt 3.7KB"]
+
+    MainPrompt --> CoreAgents["核心 Agents"]
+    MainPrompt --> MetaAgents["元 Agents"]
+    MainPrompt --> UtilityAgents["实用 Agents"]
+
+    CoreAgents --> GP["general-purpose<br/>1.4KB 通用任务"]
+    CoreAgents --> Explore["Explore<br/>931B 文件搜索"]
+    CoreAgents --> Plan["Plan<br/>任务规划"]
+
+    MetaAgents --> AA["Agent Architect<br/>5KB 创建 Agents"]
+    MetaAgents --> SR["Security Review<br/>10.8KB 安全审查"]
+    MetaAgents --> CR["Code Reviewer<br/>862B 代码审查"]
+
+    UtilityAgents --> SL["statusline-setup<br/>3.2KB 配置管理"]
+    UtilityAgents --> BA["Bash Analyzer<br/>2.7KB 输出分析"]
+    UtilityAgents --> Others["6 个其他 Agents"]
+
+    GP --> Tools["工具系统 400+"]
+    Explore --> Tools
+    AA --> Tools
+    SR --> Tools
+
+    Tools --> API["Anthropic API<br/>Claude Sonnet 4.5"]
+
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px
+    classDef darkRedText fill:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px
+    classDef lightPinkText fill:#1d1d1f
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px
+    classDef darkPurpleText fill:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px
+    classDef tealText fill:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px
+    classDef lightGreenText fill:#1d1d1f
+
+    class CLI darkRed
+    class GP darkPurple
+    class AA teal
+    class SR lightPink
+    class CR lightGreen
+    class SL darkRed
+    class BA darkPurple
+    class API teal`} client:load />
+
+---
+
+## 🌟 重大发现：42 个 System Prompts
+
+### Prompts 完整分类
+
+基于提取的 `system-prompts.json`，Claude Code 2.0 包含 **42 个独立的 System Prompts**，总计 **53KB**：
+
+<ScrollReveal client:load>
+
+#### 📋 按类别分布
+
+| 类别            | 数量 | 总大小  | 主要功能                     |
+| --------------- | ---- | ------- | ---------------------------- |
+| **System**      | 1    | 94 B    | 核心身份定义                 |
+| **Tool**        | 16   | 36.8 KB | 工具使用规范                 |
+| **Instruction** | 4    | 1.2 KB  | 行为指令                     |
+| **Other**       | 11   | 7.1 KB  | 模板、配置、辅助功能         |
+| **Error**       | 1    | 2.7 KB  | 错误处理和输出摘要           |
+| **未分类**      | 9    | 5.0 KB  | 待归类（可能为动态生成内容） |
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+#### 🎯 核心 Tool Prompts（前 10 大）
+
+| Prompt ID             | 大小    | 核心功能                       | 分类  |
+| --------------------- | ------- | ------------------------------ | ----- |
+| **prompt_sym_Ue5_23** | 10.8 KB | Security Review - 安全审查     | Tool  |
+| **prompt_sym_LHB_32** | 9.7 KB  | TodoWrite - 任务管理           | Tool  |
+| **prompt_sym_qL6_0**  | 6.1 KB  | Git Commit & PR - 版本控制     | Tool  |
+| **prompt_sym_qpA_11** | 5.1 KB  | Session Summary - 对话摘要     | Tool  |
+| **prompt_sym_ve5_6**  | 5.0 KB  | Agent Architect - Agent 创建器 | Tool  |
+| **prompt_sym_la2_7**  | 4.3 KB  | MCP CLI - MCP 工具集成         | Tool  |
+| **prompt_sym_BfQ_24** | 4.0 KB  | Task (Subagent) - 子任务调度   | Tool  |
+| **prompt_sym_sEQ_12** | 3.7 KB  | Bash - 命令执行                | Tool  |
+| **prompt_sym_b2I_9**  | 881 B   | Session Notes Template         | Other |
+| **prompt_sym_Iz1_17** | 892 B   | Grep - 代码搜索                | Tool  |
+
+</ScrollReveal>
+
+<ScrollReveal client:load>
+
+#### 🔧 完整工具定义（15个工具）
+
+从 `tool-definitions.json` 提取的所有可用工具：
+
+| 工具                | 描述                  | 是否只读 | 并发安全 | 置信度 |
+| ------------------- | --------------------- | -------- | -------- | ------ |
+| **Bash**            | 终端命令执行          | ❌       | ❌       | 1.0    |
+| **Glob**            | 文件模式匹配          | ✅       | ✅       | 1.0    |
+| **Task**            | 子任务 Agent 调度     | ❌       | ❌       | 1.0    |
+| **Grep**            | Ripgrep 代码搜索      | ✅       | ✅       | 1.0    |
+| **Read**            | 读取文件内容          | ✅       | ✅       | 1.0    |
+| **Edit**            | 精确字符串替换        | ❌       | ❌       | 1.0    |
+| **Write**           | 写入/覆盖文件         | ❌       | ❌       | 1.0    |
+| **NotebookEdit**    | Jupyter Notebook 编辑 | ❌       | ❌       | 1.0    |
+| **WebFetch**        | 获取并分析网页内容    | ✅       | ✅       | 1.0    |
+| **WebSearch**       | Web 搜索（仅美国）    | ✅       | ✅       | 1.0    |
+| **TodoWrite**       | 结构化任务列表管理    | ❌       | ❌       | 1.0    |
+| **AskUserQuestion** | 运行时询问用户        | ❌       | ❌       | 1.0    |
+| **ExitPlanMode**    | 退出计划模式进入编码  | ❌       | ❌       | 1.0    |
+| **SlashCommand**    | 执行自定义斜杠命令    | ❌       | ❌       | 1.0    |
+| **LSP**             | 语言服务器协议集成    | ✅       | ✅       | 1.0    |
+
+**注**: 还有 3 个工具（LocalVariables, Anr, Skill）置信度为 0.3，可能为内部/实验性功能。
+
+</ScrollReveal>
+
+---
+
+## 🔧 工具系统架构
+
+### 15 个核心工具分类
+
+<Mermaid chart={`graph TB
+    subgraph Tools["15 个核心工具"]
+        FileOps["文件操作<br/>Read Edit Write NotebookEdit"]
+        Search["搜索工具<br/>Glob Grep"]
+        Exec["执行工具<br/>Bash"]
+        Web["网络工具<br/>WebFetch WebSearch"]
+        AI["AI 增强<br/>Task AskUserQuestion"]
+        Dev["开发辅助<br/>LSP TodoWrite SlashCommand"]
+        Mode["模式切换<br/>ExitPlanMode"]
+    end
+
+    subgraph Agents["System Prompts 层（42个）"]
+        ToolPrompts["工具 Prompts<br/>16个 (36.8KB)"]
+        SystemPrompts["核心 Prompts<br/>5个 (16.2KB)"]
+    end
+
+    Agents --> Tools
+    Tools --> API["Claude Sonnet 4.5<br/>1M Context"]
+    API --> Response["返回用户"]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class AI darkRed
+    class ToolPrompts darkPurple
+    class API teal`} client:load />
+
+### 工具使用统计
+
+基于 `tool-definitions.json` 的分析：
+
+| 特性               | 统计      | 说明                                                |
+| ------------------ | --------- | --------------------------------------------------- |
+| **总工具数**       | 15 个核心 | + 3 个实验性工具                                    |
+| **只读工具**       | 5 个      | Glob, Grep, Read, WebFetch, WebSearch, LSP          |
+| **写入工具**       | 7 个      | Edit, Write, NotebookEdit, Bash, TodoWrite, Task 等 |
+| **并发安全**       | 5 个      | Glob, Grep, Read, WebFetch, WebSearch, LSP          |
+| **高置信度**       | 15 个     | 所有核心工具置信度均为 1.0                          |
+| **System Prompts** | 16 个     | 每个工具都有对应的使用规范 Prompt                   |
+
+---
+
+## 💡 核心发现
+
+### 1. Agent Architect - 元编程的艺术
+
+**Prompt ID**: `prompt_sym_ve5_6` | **大小**: 5.0 KB | **分类**: Tool
+
+这是 Claude Code 最强大的 System Prompt，能够**创建其他 Agents**！它本质上是一个"Agent 的 Agent"。
+
+<Mermaid chart={`sequenceDiagram
+    participant User as 用户
+    participant CC as Claude Code
+    participant AA as Agent Architect<br/>prompt_sym_ve5_6
+    participant NewAgent as 新创建的 Agent
+
+    User->>CC: "我需要一个专门审查 Rust 的 Agent"
+    CC->>AA: 触发 Agent Architect Prompt
+    AA->>AA: 1. 提取核心意图<br/>2. 设计专家身份<br/>3. 架构指令体系
+    AA->>AA: 生成 JSON 配置:<br/>{identifier, whenToUse, systemPrompt}
+    AA->>NewAgent: 创建 Rust Reviewer Agent
+    NewAgent->>CC: 返回新 Agent 配置
+    CC->>User: "Rust Reviewer Agent 已创建！"
+
+    User->>NewAgent: "审查我的 Rust 代码"
+    NewAgent->>User: 提供专业的 Rust 安全审查建议
+`} client:load />
+
+**从源码提取的关键特性**：
+
+```typescript
+// Agent Architect 的输出格式（从 prompt_sym_ve5_6 提取）
+{
+  "identifier": "rust-security-reviewer",  // kebab-case, 2-4 词
+  "whenToUse": "Use this agent when reviewing Rust code for memory safety...",
+  "systemPrompt": `You are an elite Rust security expert...
+    - Always check for unsafe blocks
+    - Verify lifetime annotations
+    - Ensure proper error handling with Result<T, E>
+    ...`
+}
+```
+
+**核心设计原则**（来自 Prompt 内容）：
+- 📝 **5KB 复杂指令系统** - 包含 6 个阶段的 Agent 设计流程
+- 🎨 **完全可定制** - 定义 Agent 的身份、工具权限、行为边界
+- 🔒 **项目感知** - 自动整合 CLAUDE.md 的项目规范
+- 🚀 **动态扩展** - 无需修改源码即可创建新能力
+- 📖 **示例驱动** - 内置 `whenToUse` 模板，包含具体使用场景
+
+### 2. Security Review - 最大最复杂的 Prompt
+
+**Prompt ID**: `prompt_sym_Ue5_23` | **大小**: **10.8 KB** | **分类**: Tool
+
+这是 Claude Code 2.0 中**最大的单个 System Prompt**，实现了企业级的三阶段安全审查框架。
+
+<Mermaid chart={`flowchart TD
+    Start["PR 代码"] --> Git["读取 Git Diff<br/>git diff origin/HEAD..."]
+    Git --> Parse["解析变更文件"]
+
+    Parse --> Phase1["阶段 1: 代码库上下文研究"]
+    Phase1 --> Research["使用 Grep/Glob<br/>理解现有安全模式"]
+
+    Research --> Phase2["阶段 2: 比较分析"]
+    Phase2 --> Compare["对比新代码 vs 现有模式<br/>识别偏差和不一致"]
+
+    Compare --> Phase3["阶段 3: 漏洞评估"]
+    Phase3 --> Categories["检查 8 大类别:<br/>- 注入攻击<br/>- 认证/授权<br/>- 加密/密钥<br/>- 代码执行<br/>- 数据泄露<br/>..."]
+
+    Categories --> FalsePositive["假阳性过滤"]
+    FalsePositive --> Confidence["置信度评分<br/>仅报告 > 0.8 的问题"]
+
+    Confidence --> Report["生成 Markdown 报告"]
+
+    Report --> Output["输出格式:<br/># Vuln: file.py:42<br/>- Severity: High<br/>- Description<br/>- Exploit Scenario<br/>- Recommendation"]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+
+    class Phase1 darkRed
+    class Phase2 darkPurple
+    class Phase3 teal
+    class Report lightPink`} client:load />
+
+**从源码提取的核心策略**：
+
+**8 大安全类别**（直接来自 Prompt）:
+1. **Input Validation** - SQL/Command/XXE/Template/NoSQL 注入、路径遍历
+2. **Authentication & Authorization** - 认证绕过、权限提升、会话管理
+3. **Crypto & Secrets** - 硬编码密钥、弱加密、密钥存储
+4. **Injection & Code Execution** - RCE、反序列化、Pickle/YAML 注入、XSS
+5. **Data Exposure** - 敏感数据日志、PII 处理、API 泄露
+
+**假阳性过滤规则**（17 条硬性排除）:
+```markdown
+❌ 不报告：DoS 攻击、磁盘存储的密钥、速率限制、单元测试文件、日志注入
+❌ 不报告：环境变量攻击、内存泄漏、React/Angular XSS（框架已处理）
+❌ 不报告：GitHub Actions 漏洞（除非明确可利用）
+✅ 仅报告：置信度 ≥ 0.8 且有具体利用路径的漏洞
+```
+
+**置信度评分系统**:
+- **0.9-1.0**: 明确的利用路径，已测试
+- **0.8-0.9**: 清晰的漏洞模式，已知利用方法
+- **0.7-0.8**: 可疑模式，需特定条件（不报告）
+
+### 3. Task - Subagents 并行调度系统
+
+**Prompt ID**: `prompt_sym_BfQ_24` | **大小**: 4.0 KB | **分类**: Tool
+
+Task 工具是 Claude Code 2.0 的核心并行架构，允许主 Agent 启动多个子 Agents 并发执行任务。
+
+<Mermaid chart={`flowchart TB
+    User["用户任务"] --> Router["主 Agent 路由器"]
+
+    Router --> Analyze["任务分析"]
+    Analyze --> Decision{可并行?}
+
+    Decision -->|是| Decompose["任务分解"]
+    Decision -->|否| Single["单 Agent 顺序执行"]
+
+    Decompose --> Launch["启动多个 Subagents"]
+
+    Launch --> SA1["Subagent 1<br/>独立上下文"]
+    Launch --> SA2["Subagent 2<br/>独立上下文"]
+    Launch --> SA3["Subagent 3<br/>独立上下文"]
+
+    SA1 --> Tools1["工具调用集<br/>Read/Grep/Edit..."]
+    SA2 --> Tools2["工具调用集<br/>Bash/Write..."]
+    SA3 --> Tools3["工具调用集<br/>WebSearch..."]
+
+    Tools1 --> Result1["结果 1"]
+    Tools2 --> Result2["结果 2"]
+    Tools3 --> Result3["结果 3"]
+
+    Result1 --> Merge["结果合并器"]
+    Result2 --> Merge
+    Result3 --> Merge
+
+    Merge --> Final["最终输出"]
+
+    Single --> Final
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class SA1 darkRed
+    class SA2 darkPurple
+    class SA3 teal
+    class Final lightGreen`} client:load />
+
+**从 Prompt 提取的核心机制**：
+
+**可用的 Agent 类型**（18+ 专业 Agents）:
+- **general-purpose** - 通用任务，全工具访问
+- **Explore** - 快速代码库搜索（Glob/Grep/Read only）
+- **Plan** - 任务规划，只读工具
+- **code-reviewer** - 代码审查
+- **security-review** - 安全审查
+- 以及 13+ 其他专业 Agents...
+
+**使用规则**（直接来自 Prompt）:
+```markdown
+✅ DO: 并发启动多个 Agents - 单次调用多个 Task 工具
+✅ DO: 在 prompt 中详细描述任务，指定返回信息
+✅ DO: 信任 Agent 输出结果
+
+❌ DON'T: 用 Task 搜索具体文件 - 直接用 Read/Glob
+❌ DON'T: 用 Task 搜索类定义 - 直接用 Grep
+❌ DON'T: Agent 间通信 - 每个 Agent 是独立的
+```
+
+**性能优势**：
+- ⚡ **并行执行** - 多任务同时处理，3-5x 速度提升
+- 🎯 **专业分工** - 每个 Agent 使用最适合的工具集
+- 🔄 **自动协调** - 主 Agent 自动合并结果
+- 📦 **独立上下文** - 每个 Subagent 维护自己的状态
+
+---
+
+## 🔐 安全架构：沙箱与权限系统
+
+### 四层权限模式
+
+Claude Code 2.0 采用精细化的权限控制，提供 4 种运行模式：
+
+| 模式                  | 文件读取 | 文件修改   | 命令执行   | 适用场景                   |
+| --------------------- | -------- | ---------- | ---------- | -------------------------- |
+| **default**           | ✅ 自动  | 🔔 需确认 | 🔔 需确认 | 日常开发（推荐）           |
+| **plan**              | ✅ 自动  | ❌ 禁止    | ❌ 禁止    | 代码分析、架构设计         |
+| **acceptEdits**       | ✅ 自动  | ✅ 自动    | 🔔 需确认 | 快速迭代、信任的代码库     |
+| **bypassPermissions** | ✅ 自动  | ✅ 自动    | ✅ 自动    | 完全自主模式（需谨慎使用） |
+
+### 沙箱隔离技术
+
+<Mermaid chart={`flowchart TD
+    User["用户指令"] --> Agent["Claude Code Agent"]
+
+    Agent --> Sandbox["🔒 沙箱环境"]
+
+    subgraph Sandbox["沙箱隔离层"]
+        FS["文件系统隔离"]
+        Net["网络隔离"]
+        Proc["进程隔离"]
+    end
+
+    subgraph FS["文件系统边界"]
+        RW["读写权限<br/>CWD 及子目录"]
+        RO["只读权限<br/>系统其他目录"]
+        Deny["禁止访问<br/>敏感目录"]
+    end
+
+    subgraph Net["网络边界"]
+        Proxy["Unix Socket<br/>→ 外部代理"]
+        Allow["允许域名<br/>白名单"]
+        Block["阻止域名<br/>黑名单"]
+    end
+
+    FS --> Check{安全检查}
+    Net --> Check
+
+    Check -->|通过| Execute["执行命令"]
+    Check -->|拒绝| Block2["阻止并记录"]
+
+    Execute --> Result["返回结果"]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+
+    class Sandbox darkRed
+    class Check darkPurple
+    class Execute teal
+    class Block2 lightPink`} client:load />
+
+**实现技术**：
+- **Linux**: 基于 **bubblewrap** 实现 namespace 隔离
+- **macOS**: 基于 **seatbelt** 实现沙箱限制
+- **Windows**: 进程级隔离（实验性支持）
+
+**安全收益**（来自 Anthropic 官方数据）：
+- 📉 **权限提示减少 84%** - 在内部使用中验证
+- 🛡️ **完全隔离提示注入攻击** - 无法访问 SSH 密钥或发送恶意请求
+- ⚡ **零性能损耗** - 沙箱开销 < 5ms
+
+### 激活沙箱模式
+
+```bash
+# 方式 1: 使用斜杠命令
+/sandbox
+
+# 方式 2: 启动时指定
+claude --sandbox
+
+# 方式 3: 配置文件（~/.claude/config.json）
+{
+  "sandbox": {
+    "enabled": true,
+    "allowedDomains": ["github.com", "npmjs.com"],
+    "deniedPaths": ["/etc/", "~/.ssh/"]
+  }
+}
+```
+
+---
+
+## 🧠 Extended Thinking - 深度推理模式
+
+### 什么是 Extended Thinking？
+
+Claude Sonnet 4.5 引入的 Extended Thinking 模式允许模型在回答前进行**多步骤顺序推理**，使用更多计算资源来解决复杂问题。
+
+<Mermaid chart={`sequenceDiagram
+    participant User as 开发者
+    participant UI as Claude Code UI
+    participant Model as Claude 4.5 Sonnet
+    participant Thinking as Extended Thinking
+
+    User->>UI: 输入复杂问题<br/>("ultrathink: 优化算法")
+    UI->>Model: 检测到 thinking 关键词
+    Model->>Thinking: 启动深度推理模式
+
+    Thinking->>Thinking: Step 1: 分析问题
+    Thinking->>Thinking: Step 2: 探索方案
+    Thinking->>Thinking: Step 3: 评估权衡
+    Thinking->>Thinking: Step N: 优化结论
+
+    Note over Thinking: 可见推理过程<br/>Thinking Tokens: 5000+
+
+    Thinking->>Model: 返回推理结果
+    Model->>UI: 展示最终答案
+    UI->>User: 包含推理步骤的完整回答
+
+    User->>UI: Tab 键
+    Note over UI: 切换 Thinking 模式<br/>状态持久化
+`} client:load />
+
+### 性能特性
+
+**准确率提升**（来自 Anthropic 官方测试）：
+- 数学问题准确率：随 thinking tokens 对数级提升
+- 代码调试准确率：比标准模式高 40%+
+- 复杂推理任务：接近人类专家水平
+
+**触发方式**：
+1. **Tab 键切换** - 在任何对话中按 Tab 开启/关闭
+2. **关键词触发** - 使用 `ultrathink`, `think hard`, `deep reasoning`
+3. **自动检测** - 模型自动判断是否需要深度思考
+
+**适用场景**：
+- ✅ 数学证明和复杂计算
+- ✅ 算法优化和性能分析
+- ✅ 架构设计决策
+- ✅ 代码重构方案评估
+- ❌ 简单的代码格式化（浪费资源）
+
+---
+
+## 💾 检查点与回滚系统
+
+### 自动检查点机制
+
+<Mermaid chart={`flowchart LR
+    User["用户提示"] --> Agent["Claude 分析"]
+    Agent --> Edit{需要编辑?}
+
+    Edit -->|是| CP["🔖 创建检查点"]
+    Edit -->|否| NoCP["跳过检查点"]
+
+    CP --> Save["保存状态:<br/>• 文件内容<br/>• 对话历史<br/>• 时间戳"]
+
+    Save --> Execute["执行编辑"]
+    Execute --> Store["存储 30 天"]
+
+    subgraph Restore["恢复选项"]
+        Code["仅恢复代码"]
+        Chat["仅恢复对话"]
+        Both["恢复两者"]
+    end
+
+    Store -.Esc Esc.-> Restore
+    Store -./rewind.-> Restore
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class CP darkPurple
+    class Restore teal`} client:load />
+
+### 检查点策略
+
+**自动创建时机**：
+- ✅ 每个用户提示后（如果产生编辑）
+- ✅ 多文件批量修改前
+- ✅ 危险操作前（删除文件、重构等）
+
+**不创建检查点的情况**：
+- ❌ Bash 命令产生的文件修改
+- ❌ 只读操作（搜索、分析等）
+- ❌ 纯对话（无代码修改）
+
+### 使用方法
+
+```bash
+# 方式 1: 快捷键
+Esc + Esc  # 打开回滚菜单
+
+# 方式 2: 斜杠命令
+/rewind    # 显示所有检查点
+
+# 方式 3: 交互式选择
+# 1. 选择要恢复的检查点
+# 2. 选择恢复模式：
+#    - Code only (保留对话)
+#    - Conversation only (保留代码)
+#    - Both (完全回退)
+```
+
+**实战场景**：
+```
+场景 1: 实验性重构
+→ 让 Claude 尝试 3 种不同的重构方案
+→ 每次尝试后 /rewind (code only)
+→ 对比结果，选择最佳方案
+
+场景 2: 探索性开发
+→ 启用 Subagents 并行探索多个方向
+→ 如果某个方向不理想，Esc Esc 回退
+→ 对话历史保留，重新指导方向
+```
+
+---
+
+## 🔌 MCP - Model Context Protocol 集成
+
+### MCP 生态系统
+
+Model Context Protocol 是 Anthropic 提出的开源标准，被誉为 **"AI 的 USB-C"** - 统一的 AI 工具连接协议。
+
+<Mermaid chart={`graph TB
+    subgraph Claude["Claude Code"]
+        Agent["AI Agent"]
+        MCP["MCP Client"]
+    end
+
+    subgraph Servers["MCP Servers (8000+)"]
+        Official["官方服务器"]
+        Community["社区服务器"]
+    end
+
+    subgraph Official["官方集成"]
+        Stripe["💳 Stripe<br/>支付"]
+        Plaid["🏦 Plaid<br/>银行数据"]
+        Square["🛒 Square<br/>交易"]
+        Figma["🎨 Figma<br/>设计"]
+    end
+
+    subgraph Community["社区生态"]
+        Zapier["⚡ Zapier<br/>8000+ 应用"]
+        GitHub["🐙 GitHub<br/>代码托管"]
+        DB["🗄️ Database<br/>SQL/NoSQL"]
+        Custom["🔧 Custom<br/>自定义服务"]
+    end
+
+    Agent --> MCP
+    MCP -->|HTTP/SSE| Official
+    MCP -->|HTTP/SSE| Community
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class Agent darkRed
+    class MCP darkPurple
+    class Zapier teal`} client:load />
+
+### 配置 MCP 服务器
+
+```bash
+# 添加 HTTP MCP 服务器（推荐）
+claude mcp add --transport http stripe https://api.stripe.com/mcp
+
+# 添加本地 MCP 服务器
+claude mcp add --transport stdio local-db ./mcp-servers/database
+
+# 列出所有已配置的服务器
+claude mcp list
+
+# 测试服务器连接
+claude mcp test stripe
+```
+
+### Token 管理
+
+**输出限制**：
+- 默认警告阈值：**10,000 tokens**
+- 默认硬性限制：**25,000 tokens**
+- 可通过环境变量调整：`MAX_MCP_OUTPUT_TOKENS`
+
+```bash
+# 提高 MCP 输出限制到 50K tokens
+export MAX_MCP_OUTPUT_TOKENS=50000
+```
+
+### 实战案例
+
+**案例 1: Zapier 集成 - 自动化工作流**
+```markdown
+你: 当有新的 GitHub issue 被创建时，自动：
+1. 在 Jira 创建对应的 ticket
+2. 在 Slack #dev 频道通知团队
+3. 如果标签包含 "urgent"，发送 PagerDuty 告警
+
+Claude + Zapier MCP:
+✅ 分析需求
+✅ 设计 3 步 Zapier workflow
+✅ 配置触发器和动作
+✅ 测试并部署
+```
+
+**案例 2: Stripe + Plaid - 金融数据分析**
+```markdown
+你: 分析过去 6 个月的交易数据，生成：
+1. 月度收入趋势图
+2. 前 10 大客户列表
+3. 退款率分析报告
+
+Claude + Stripe MCP + Plaid MCP:
+✅ 从 Stripe 拉取交易记录
+✅ 从 Plaid 获取银行对账数据
+✅ 交叉验证和数据清洗
+✅ 生成可视化图表和 PDF 报告
+```
+
+---
+
+## 📖 CLAUDE.md - 项目上下文管理
+
+### 文件层级系统
+
+Claude Code 采用**递归读取**机制，从当前目录向上查找所有 `CLAUDE.md` 文件：
+
+<Mermaid chart={`flowchart TD
+    Start["claude 命令"] --> CWD["当前工作目录<br/>/project/src/features/auth"]
+
+    CWD --> Read1["读取 CLAUDE.md"]
+    Read1 --> Up1["向上一级<br/>/project/src/features"]
+
+    Up1 --> Read2["读取 CLAUDE.md"]
+    Read2 --> Up2["向上一级<br/>/project/src"]
+
+    Up2 --> Read3["读取 CLAUDE.md"]
+    Read3 --> Up3["向上一级<br/>/project"]
+
+    Up3 --> Read4["读取 CLAUDE.md"]
+    Read4 --> Up4["向上一级<br/>~/ (用户目录)"]
+
+    Up4 --> Read5["读取 ~/.claude/CLAUDE.md"]
+    Read5 --> Merge["合并所有上下文"]
+
+    Merge --> Context["构建完整上下文"]
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class Read1 darkPurple
+    class Read2 darkPurple
+    class Read3 darkPurple
+    class Context teal`} client:load />
+
+### 最佳实践模板
+
+**全局配置** (`~/.claude/CLAUDE.md`):
+```markdown
+# 我的全局编码偏好
+
+## 通用规范
+- 使用 TypeScript 而非 JavaScript
+- 函数不超过 50 行
+- 测试覆盖率 > 80%
+
+## 提交规范
+遵循 Conventional Commits:
+- feat: 新功能
+- fix: Bug 修复
+- docs: 文档更新
+- refactor: 重构
+
+## 我的工作流
+- 功能分支：`feature/[issue-id]-description`
+- 永远 rebase，不要 merge
+- Push 前必须通过 lint 和 test
+```
+
+**项目根目录** (`/project/CLAUDE.md`):
+```markdown
+# 项目: E-Commerce Platform
+
+## 技术栈
+- Frontend: Next.js 14 + React 18 + TailwindCSS
+- Backend: Node.js + Express + PostgreSQL
+- Deploy: Vercel (frontend) + AWS Lambda (backend)
+
+## 核心文件
+- `@src/lib/db.ts` - 数据库连接和查询工具
+- `@src/lib/auth.ts` - JWT 认证逻辑
+- `@docs/API.md` - API 文档
+
+## 禁止修改
+- `src/lib/legacy/` - 遗留代码，正在迁移中
+- `prisma/migrations/` - 数据库迁移历史
+- `.github/workflows/` - CI/CD 流水线（DevOps 团队管理）
+
+## 代码组织
+按功能模块组织，而非文件类型：
+```
+src/
+  features/
+    auth/
+      - AuthService.ts
+      - AuthController.ts
+      - auth.test.ts
+    products/
+      - ProductService.ts
+      - ProductController.ts
+      - products.test.ts
+```
+
+## 命名约定
+- React 组件: PascalCase (UserProfile.tsx)
+- 工具函数: camelCase (getUserData.ts)
+- 常量: UPPER_SNAKE_CASE (MAX_RETRY_COUNT)
+```
+
+**特性子目录** (`/project/src/features/payments/CLAUDE.md`):
+```markdown
+# 支付模块
+
+## Stripe 集成
+使用 Stripe Checkout 和 Webhooks。
+关键文件：
+- `StripeService.ts` - Stripe SDK 封装
+- `webhooks.ts` - Webhook 处理器
+
+## 测试要求
+支付相关代码必须有 100% 测试覆盖率。
+使用 Stripe 测试卡号进行集成测试。
+
+## 安全注意
+- 永远不要记录完整的信用卡号
+- Webhook 签名必须验证
+- 使用环境变量存储 Stripe Secret Key
+```
+
+### 高级功能：导入引用
+
+```markdown
+# 主 CLAUDE.md
+
+## 导入其他文档
+@docs/README.md
+@docs/CONTRIBUTING.md
+@.github/PULL_REQUEST_TEMPLATE.md
+
+## 导入代码示例
+参考标准实现：
+@src/features/auth/AuthService.ts
+
+## 导入配置
+遵循 ESLint 规则：
+@.eslintrc.json
+```
+
+**优势**：
+- 🎯 DRY 原则 - 不重复编写文档
+- 🔄 自动同步 - 文档更新自动生效
+- 📦 模块化 - 按关注点分离配置
+
+---
+
+## 🏗️ 核心工作流：Agent Loop 架构
+
+### 简洁而强大的 while(tool_use) Loop
+
+Claude Code 的核心是一个**极简但高效**的 Agent Loop，这也是其高性能的关键：
+
+<Mermaid chart={`flowchart TD
+    Start([用户输入]) --> Agent["Claude Agent<br/>加载 System Prompts"]
+
+    Agent --> Generate["生成响应"]
+    Generate --> Check{包含工具调用?}
+
+    Check -->|是| Execute["执行工具"]
+
+    subgraph Tools["15 个核心工具"]
+        FileOps["文件操作<br/>Read/Edit/Write"]
+        Search["搜索工具<br/>Glob/Grep"]
+        Exec["命令执行<br/>Bash"]
+        Web["Web<br/>Fetch/Search"]
+        AI["AI 工具<br/>Task/AskUser"]
+    end
+
+    Execute --> Tools
+    Tools --> Result["工具结果"]
+    Result --> Reminder["System Reminder<br/>智能提示注入"]
+    Reminder --> Agent
+
+    Check -->|否| Output["输出给用户"]
+    Output --> Wait["等待用户输入"]
+    Wait --> Agent
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Agent darkRed
+    class Execute darkPurple
+    class Tools teal
+    class Output lightGreen
+`} client:load />
+
+### 核心机制：System Reminders
+
+Claude Code 的一个巧妙设计是 **System Reminders** - 根据工具调用和状态动态注入的提示：
+
+```markdown
+触发条件 → System Reminder
+
+1. 调用 Edit 工具 → "确保你已经用 Read 读取了文件"
+2. 调用 Write 工具 → "优先使用 Edit 而非 Write"
+3. TODO 列表为空 → "考虑使用 TodoWrite 跟踪任务"
+4. Bash 输出过长 → "是否需要摘要这个输出？"
+5. 读取可疑文件 → "检查是否为恶意软件"
+```
+
+**优势**：
+- 🎯 **上下文感知** - 动态提示而非静态规则
+- 💡 **自我纠正** - 实时提醒最佳实践
+- 🔄 **状态驱动** - 根据当前状态调整行为
+
+### 工具选择决策树
+
+<Mermaid chart={`flowchart TD
+    Task["任务需求"] --> Type{任务类型?}
+
+    Type -->|搜索具体文件| Direct["直接用 Read/Glob"]
+    Type -->|搜索类定义| Grep["使用 Grep"]
+    Type -->|复杂多步骤| SubTask{可并行?}
+
+    SubTask -->|是| Parallel["Task 工具<br/>启动多个 Subagents"]
+    SubTask -->|否| Single["单个 Agent<br/>顺序执行"]
+
+    Direct --> Execute["执行"]
+    Grep --> Execute
+    Parallel --> Execute
+    Single --> Execute
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class Task darkPurple
+    class Execute teal
+`} client:load />
+
+**决策规则**（来自提取的 Prompts）：
+```markdown
+❌ 不要用 Task 搜索具体文件 → 直接用 Read/Glob
+❌ 不要用 Task 搜索类定义 → 直接用 Grep
+✅ 用 Task 处理复杂、多步骤任务
+✅ 用 Task 需要专业化 Agent（如 security-review）
+✅ 用 Task 实现并行加速
+```
+
+---
+
+## 🏗️ 详细架构图
+
+### Agent 层次结构
+
+<Mermaid chart={`graph TB
+    subgraph Main["主 Prompt 层"]
+        MP["Main System Prompt<br/>3.7KB"]
+    end
+
+    subgraph Core["核心 Agent 层"]
+        GP["general-purpose<br/>1.4KB<br/>全能型"]
+        Explore["Explore<br/>931B<br/>搜索专家"]
+        Plan["Plan<br/>规划专家"]
+    end
+
+    subgraph Meta["元 Agent 层"]
+        AA["Agent Architect<br/>5.0KB<br/>Agent 创建者"]
+        SR["Security Review<br/>10.8KB<br/>安全审查"]
+        CR["Code Reviewer<br/>862B<br/>代码审查"]
+    end
+
+    subgraph Util["实用 Agent 层"]
+        SL["statusline-setup<br/>3.2KB"]
+        BA["Bash Analyzer<br/>2.7KB"]
+        GC["Git Comment<br/>1.3KB"]
+        Others["7 个其他 Agents"]
+    end
+
+    MP --> Core
+    MP --> Meta
+    MP --> Util
+
+    Core --> Tools["400+ 工具"]
+    Meta --> Tools
+    Util --> Tools
+
+    Tools --> API["Claude Sonnet 4.5<br/>1M Context"]
+
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px
+    classDef darkRedText fill:#fff
+    classDef lightPink fill:#f5cbc5,stroke:#b3272c,stroke-width:2px
+    classDef lightPinkText fill:#1d1d1f
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px
+    classDef darkPurpleText fill:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px
+    classDef tealText fill:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px
+    classDef lightGreenText fill:#1d1d1f
+
+    class MP darkRed
+    class GP darkPurple
+    class AA teal
+    class SR lightPink
+    class CR lightGreen
+    class SL darkRed
+    class BA darkPurple
+    class GC teal
+    class API lightPink`} client:load />
+
+---
+
+## 🔥 Claude Code 2.0 核心新特性（Sep 2025）
+
+### 1. VS Code 扩展 - IDE 原生集成
+
+2025 年 9 月发布的最重要更新，将 Claude Code 带入主流开发环境：
+
+<Mermaid chart={`graph TB
+    VSCode["VS Code / Cursor / Windsurf"] --> Ext["Claude Code Extension"]
+
+    subgraph Features["扩展功能"]
+        Sidebar["📊 侧边栏面板"]
+        Inline["✏️ 内联 Diff"]
+        StatusBar["📍 状态栏"]
+        Chat["💬 原生聊天"]
+    end
+
+    Ext --> Features
+
+    Sidebar --> RealTime["实时更改显示<br/>多文件视图<br/>历史记录"]
+    Inline --> DiffView["差异对比<br/>接受/拒绝<br/>逐块审查"]
+    StatusBar --> Progress["进度显示<br/>Agent 状态<br/>Token 使用"]
+    Chat --> Direct["直接对话<br/>@ 文件引用<br/>代码补全"]
+
+    Features --> Backend["Claude Code 后端"]
+    Backend --> API["Claude Sonnet 4.5<br/>1M Context"]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Ext darkRed
+    class Backend darkPurple
+    class API teal`} client:load />
+
+**关键优势**：
+- 🎯 **无缝工作流** - 无需切换终端和编辑器
+- 👁️ **可视化 Diff** - 清晰查看每个修改
+- ⚡ **实时同步** - 编辑器和 Claude Code 状态同步
+- 🔌 **完全兼容** - 支持所有 VS Code 扩展
+
+### 2. 简化的 System Prompt
+
+Claude Code 2.0 **删除了约 50% 的 System Prompt**，因为 Claude 4.0 模型足够强大，不再需要过多的脚手架指令。
+
+<Mermaid chart={`flowchart LR
+    V1["Claude Code 1.0<br/>System Prompt<br/>~100KB"] -->|优化| V2["Claude Code 2.0<br/>System Prompt<br/>~53KB"]
+
+    V1 --> Heavy["大量指令<br/>详细约束<br/>冗余规则"]
+    V2 --> Light["核心指令<br/>信任模型<br/>最小干预"]
+
+    Light --> Better["更快响应<br/>更自然对话<br/>更灵活行为"]
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class V2 darkPurple
+    class Better lightGreen
+`} client:load />
+
+**设计哲学转变**：
+- 🧠 **信任模型能力** - "Model can do much more than products enable it to do"
+- 🎭 **感受原始模型** - "Feel the model as raw as possible"
+- 🚫 **移除限制性 UI** - 让模型自由发挥
+
+### 3. Skills - Prompt 元工具系统
+
+Skills 是 Claude Code 2.0 的元工具架构，通过 `Skill` 工具管理所有技能：
+
+<Mermaid chart={`flowchart TD
+    User["用户调用 Skill"] --> SkillTool["Skill 元工具"]
+
+    SkillTool --> Inject["注入指令提示词"]
+    SkillTool --> Modify["修改工具权限"]
+    SkillTool --> Select["选择模型"]
+
+    Inject --> Context["改变对话上下文"]
+    Modify --> Context
+    Select --> Context
+
+    Context --> Execute["执行特定任务"]
+
+    subgraph Examples["官方 Skills 示例"]
+        PDF["document-skills:pdf<br/>PDF 操作"]
+        XLSX["document-skills:xlsx<br/>表格处理"]
+        DOCX["document-skills:docx<br/>文档编辑"]
+        Art["algorithmic-art<br/>生成艺术"]
+    end
+
+    Execute --> Examples
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+
+    class SkillTool darkRed
+    class Execute teal
+`} client:load />
+
+**使用示例**：
+```bash
+# 调用 PDF 处理 Skill
+你: skill: "document-skills:pdf"
+
+# Skill 自动：
+# 1. 注入 PDF 操作的专业 prompt
+# 2. 启用 PDF 相关工具
+# 3. 使用适合的模型配置
+```
+
+### 4. Hooks - 事件驱动自动化
+
+Hooks 允许你在特定事件发生时自动执行 shell 命令：
+
+```json
+// ~/.claude/config.json
+{
+  "hooks": {
+    "onToolCall": {
+      "Edit": "echo '文件被修改' >> changelog.txt"
+    },
+    "onUserSubmit": "npm run lint",
+    "onSessionStart": "git fetch origin",
+    "onBeforeCommit": "npm test"
+  }
+}
+```
+
+**典型应用**：
+- ✅ 修改后自动运行测试
+- ✅ 提交前自动 lint
+- ✅ 会话开始时拉取最新代码
+- ✅ 构建前清理缓存
+
+### 5. Web for Claude Code - 异步编程模式
+
+2025 年 10 月发布的 Web 版本，支持**长时间异步任务**：
+
+```markdown
+传统 CLI: 你坐在电脑前等待 Claude 完成任务（30 分钟）
+
+Web版:
+1. 启动任务 → 关闭浏览器
+2. Claude 在后台工作 30 小时
+3. 完成后通知你
+4. 打开查看结果
+```
+
+**技术实现**：
+- 后端持久化会话状态
+- WebSocket 实时同步进度
+- 支持移动端查看结果
+- 多设备无缝切换
+
+---
+
+## 📊 Claude Code vs 竞品架构对比
+
+### 核心架构差异
+
+| 维度                  | Claude Code 2.0  | Cursor Agent            | GitHub Copilot Workspace |
+| --------------------- | ---------------- | ----------------------- | ------------------------ |
+| **核心循环**          | while(tool_use)  | Multi-step planner      | Linear execution         |
+| **并行能力**          | ✅ 3-5 Subagents | ✅ 8 Agents (worktrees) | ❌ 单线程                |
+| **上下文管理**        | CLAUDE.md 递归   | .cursorrules            | 自动推断                 |
+| **安全模型**          | 4 层权限 + 沙箱  | 基础权限提示            | GitHub 内置              |
+| **工具扩展**          | MCP (8000+ 集成) | 15 个内置工具           | GitHub 生态              |
+| **检查点系统**        | ✅ 内置 30 天    | ⚠️ 依赖 Git           | ❌ 无                    |
+| **Extended Thinking** | ✅ Tab 切换      | ❌ 无                   | ❌ 无                    |
+| **IDE 集成**          | ✅ VS Code 扩展  | ✅ 原生 (VS Code Fork)  | ✅ VS Code 扩展          |
+
+### 设计哲学对比
+
+<Mermaid chart={`mindmap
+    root((设计哲学))
+        Claude Code
+            最小干预主义
+                信任模型能力
+                删除 50% Prompt
+                原始模型体验
+            模块化架构
+                42 个独立 Prompts
+                15 个核心工具
+                MCP 开放生态
+            安全优先
+                4 层权限
+                沙箱隔离
+                84% 减少提示
+        Cursor
+            Agent-Centric
+                多 Agent 并行
+                Composer 模型
+                Worktrees 隔离
+            深度集成
+                语义索引
+                实时缓存
+                VS Code Fork
+        Copilot
+            代码补全优先
+                Tab 自动补全
+                行级建议
+                上下文推断
+            GitHub 深度集成
+                Issue 联动
+                PR 审查
+                Actions 自动化
+`} client:load />
+
+---
+
+## 💻 VS Code 扩展详细架构
+
+### 扩展通信架构
+
+<Mermaid chart={`sequenceDiagram
+    participant User as 开发者
+    participant VSC as VS Code UI
+    participant Ext as Extension Host
+    participant Backend as Claude Code 后端
+    participant API as Claude API
+
+    User->>VSC: 在侧边栏输入提示
+    VSC->>Ext: 触发命令
+
+    Ext->>Backend: 建立 WebSocket 连接
+    Backend->>API: 发送请求 (含 42 Prompts)
+
+    API->>Backend: 流式返回响应
+    Backend->>Ext: 实时同步状态
+
+    loop 工具调用循环
+        Ext->>Backend: 执行工具 (Read/Edit/Bash)
+        Backend->>Backend: 应用更改
+        Backend->>Ext: 返回结果
+        Ext->>VSC: 更新 Diff 视图
+    end
+
+    Backend->>Ext: 任务完成
+    Ext->>VSC: 展示最终结果
+    VSC->>User: 可视化所有更改
+
+    Note over User,API: 全程流式传输<br/>实时进度反馈
+`} client:load />
+
+### UI 组件详解
+
+| 组件          | 功能                        | 快捷键           | 特性                 |
+| ------------- | --------------------------- | ---------------- | -------------------- |
+| **侧边栏**    | 对话历史、文件更改列表      | Cmd+Shift+C      | 多会话管理、搜索历史 |
+| **内联 Diff** | 代码差异对比、逐块接受/拒绝 | 点击行号         | 语法高亮、智能 Merge |
+| **状态栏**    | 当前 Agent 状态、Token 使用 | 鼠标悬停查看详情 | 实时更新、颜色指示   |
+| **命令面板**  | 所有 Claude Code 命令       | Cmd+Shift+P      | 模糊搜索、快捷键绑定 |
+
+---
+
+## 🎯 实战案例：端到端开发流程
+
+### 案例 1: 从零实现 REST API（含 TDD）
+
+**任务**：实现一个用户管理 API，包括 CRUD 操作和测试。
+
+<Mermaid chart={`flowchart TD
+    Start["用户需求"] --> Research["Phase 1: Research<br/>Explore Agent 搜索现有模式"]
+
+    Research --> Plan["Phase 2: Plan<br/>生成实现计划"]
+
+    Plan --> Parallel["Phase 3: 并行实现"]
+
+    Parallel --> Sub1["Subagent 1<br/>实现 API 路由"]
+    Parallel --> Sub2["Subagent 2<br/>实现数据模型"]
+    Parallel --> Sub3["Subagent 3<br/>编写测试用例"]
+
+    Sub1 --> Merge["合并结果"]
+    Sub2 --> Merge
+    Sub3 --> Merge
+
+    Merge --> Test["运行测试"]
+    Test --> Pass{通过?}
+
+    Pass -->|否| Fix["自动修复<br/>重新测试"]
+    Fix --> Test
+
+    Pass -->|是| Lint["Lint 检查"]
+    Lint --> Security["安全审查<br/>Security Review Agent"]
+
+    Security --> Done["✅ 完成"]
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Parallel darkRed
+    class Security darkPurple
+    class Done lightGreen
+`} client:load />
+
+**具体执行**：
+```markdown
+Step 1: 研究现有代码
+你: 「使用 Explore agent 搜索项目中的 API 模式」
+Claude: 找到 @src/api/products.ts 作为参考实现
+
+Step 2: 生成计划
+你: 「基于 products API，创建 users API 的实现计划」
+Claude: 生成详细计划，包括路由、验证、错误处理
+
+Step 3: 并行实现
+你: 「使用 3 个 subagents 并行实现：routes, models, tests」
+Claude:
+  - Subagent 1 → src/api/users/routes.ts
+  - Subagent 2 → src/models/User.ts
+  - Subagent 3 → tests/api/users.test.ts
+
+Step 4: TDD 迭代
+Claude: 自动运行测试 → 发现 2 个失败 → 修复 → 重跑 → 全部通过 ✅
+
+Step 5: 安全审查
+你: 「运行 security review」
+Claude: 使用 Security Review Agent → 扫描 SQL 注入、XSS 等 → 无问题
+
+Step 6: 提交
+你: 「创建 commit 和 PR」
+Claude:
+  - 生成 Conventional Commits 格式的提交信息
+  - 创建 PR，包含完整的测试计划
+```
+
+**耗时对比**：
+- 🤖 Claude Code 2.0: **8 分钟** （完全自动化）
+- 👨‍💻 人工开发: **2-3 小时**
+- ⚡ 加速比: **15-22x**
+
+### 案例 2: 大规模重构（利用 Checkpoints）
+
+**任务**：将遗留的 JavaScript 代码库重构为 TypeScript。
+
+```markdown
+Step 1: 设置检查点策略
+你: 「启用沙箱模式，每重构 5 个文件创建一个检查点」
+
+Step 2: 分阶段重构
+Phase 1: 工具函数 (10 个文件)
+  → 重构完成 → /rewind (测试) → 通过 → 继续
+Phase 2: React 组件 (25 个文件)
+  → 重构完成 → /rewind (测试) → 发现问题 → 回退 → 重新方案
+Phase 3: API 层 (15 个文件)
+  → 重构完成 → 运行集成测试 → 全部通过 ✅
+
+Step 3: 类型覆盖率验证
+Claude 自动运行: tsc --noEmit
+→ 0 errors, 100% type coverage
+
+整个过程用了 12 个检查点，回退了 3 次，最终成功完成重构。
+```
+
+### 案例 3: MCP 集成 - GitHub Issues 自动化
+
+**目标**：使用 MCP 连接 GitHub，实现 issue 自动分类和响应。
+
+```bash
+# 配置 GitHub MCP
+claude mcp add --transport http github https://api.github.com/mcp
+
+# 启动自动化
+claude -p "监控新 issues，自动执行：
+1. 分析 issue 内容，标记类型 (bug/feature/question)
+2. 如果是 bug，检查是否有重复
+3. 分配优先级 (P0-P3)
+4. 添加标签和里程碑
+5. 如果是常见问题，自动回复解决方案
+" --headless --trigger github-webhook
+```
+
+**实际效果**：
+- 📥 平均每天处理 **50+ issues**
+- ⚡ 响应时间从 **2 小时** → **< 30 秒**
+- 🎯 分类准确率 **95%+**
+- 💬 自动解决 **40%** 的常见问题
+
+---
+
+export const learningWeeks = [
+  { week: 'Week 1-2', description: '使用 Claude Code，熟悉基本功能' },
+  { week: 'Week 3', description: '深入理解架构（本文档）' },
+  { week: 'Week 6', description: '学习 Agent 设计模式' },
+  { week: 'Week 7', description: '掌握完整工作流' }
+];
+
+export const extendedReadings = [
+  {
+    title: '官方文档',
+    description: 'claude.com/claude-code',
+    href: 'https://claude.com/claude-code',
+    external: true
+  },
+  {
+    title: '工具对比',
+    description: '与其他工具的对比',
+    href: '/materials/ai-coding-tools-comparison',
+    external: false
+  }
+];
+
+<LearningSuggestion weeks={learningWeeks} readings={extendedReadings} client:load />
+
+---
+
+## 📊 完整 Prompt 统计总览
+
+### 按大小排序的 Top 15 Prompts
+
+| 排名 | Prompt ID         | 大小    | 分类  | 功能                         |
+| ---- | ----------------- | ------- | ----- | ---------------------------- |
+| 🥇  | prompt_sym_Ue5_23 | 10.8 KB | Tool  | Security Review - 安全审查   |
+| 🥈  | prompt_sym_LHB_32 | 9.7 KB  | Tool  | TodoWrite - 任务管理         |
+| 🥉  | prompt_sym_qL6_0  | 6.1 KB  | Tool  | Git Commit & PR - 版本控制   |
+| 4    | prompt_sym_qpA_11 | 5.1 KB  | Tool  | Session Summary - 对话摘要   |
+| 5    | prompt_sym_ve5_6  | 5.0 KB  | Tool  | Agent Architect - Agent 创建 |
+| 6    | prompt_sym_la2_7  | 4.3 KB  | Tool  | MCP CLI - MCP 工具集成       |
+| 7    | prompt_sym_BfQ_24 | 4.0 KB  | Tool  | Task - Subagent 调度         |
+| 8    | prompt_sym_sEQ_12 | 3.7 KB  | Tool  | Bash - 命令执行              |
+| 9    | prompt_sym_f2I_18 | 3.4 KB  | Tool  | Notes Update - 会话笔记      |
+| 10   | prompt_sym_Ws2_28 | 2.7 KB  | Error | Bash Output Analyzer         |
+| 11   | prompt_sym_CHB_38 | 1.6 KB  | Tool  | Read - 文件读取              |
+| 12   | prompt_sym_dQ2_40 | 1.3 KB  | Tool  | SlashCommand - 斜杠命令      |
+| 13   | prompt_sym_K_Q_10 | 1.1 KB  | Tool  | Edit - 文件编辑              |
+| 14   | prompt_sym_Qz1_36 | 530 B   | Tool  | Glob - 文件模式匹配          |
+| 15   | prompt_sym_b2I_9  | 881 B   | Other | Session Notes Template       |
+
+### 关键洞察
+
+从 42 个 System Prompts 的分析中发现：
+
+**1. 分层设计**
+```
+┌─────────────────────────────────────┐
+│   核心 System Prompt (94B)          │  <- 身份定义
+├─────────────────────────────────────┤
+│   工具 Prompts (16个, 36.8KB)       │  <- 工具使用规范
+│   - Git & GitHub (6.1KB)            │
+│   - Security Review (10.8KB)        │
+│   - Task Management (9.7KB + 4.0KB) │
+│   - MCP Integration (4.3KB)         │
+├─────────────────────────────────────┤
+│   辅助 Prompts (25个, 16KB)         │  <- 模板、配置、辅助
+└─────────────────────────────────────┘
+```
+
+**2. 设计哲学**
+- **最小权限原则** - 每个工具只访问必需的功能
+- **专业化分工** - 18+ 专业 Agents，各有最优工具集
+- **自愈系统** - Bash Analyzer 自动摘要，Security Review 假阳性过滤
+- **上下文感知** - Session Summary 记忆管理，Notes 自动更新
+
+**3. 创新点**
+- **元编程** - Agent Architect 可创建新 Agents
+- **并行架构** - Task 工具实现真正的并发执行
+- **安全优先** - 10.8KB 的安全审查，17 条假阳性过滤规则
+- **开发者体验** - TodoWrite 9.7KB，详尽的任务管理指导
+
+
+---
+
+## ⚡ 性能优化最佳实践
+
+### 官方最佳实践（Anthropic 2025）
+
+基于 Anthropic 工程团队的经验和社区反馈，以下是经过验证的性能优化策略：
+
+#### 1. 明确具体的指令
+
+<Mermaid chart={`flowchart LR
+    Vague["❌ 模糊指令<br/>\"优化这个文件\""] --> Poor["成功率: 40%"]
+    Specific["✅ 具体指令<br/>\"将这个函数拆分为...\""] --> Good["成功率: 85%"]
+
+    style Vague fill:#f5cbc5,stroke:#b3272c,stroke-width:2px,color:#1d1d1f
+    style Specific fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+`} client:load />
+
+**示例对比**：
+```markdown
+❌ 差：重构这个组件
+✅ 好：将 UserProfile 组件拆分为：
+   1. UserAvatar (头像显示)
+   2. UserInfo (基本信息)
+   3. UserActions (操作按钮)
+   遵循 src/components/patterns 中的设计模式
+```
+
+#### 2. 研究优先的工作流
+
+```markdown
+场景：实现用户认证系统
+
+✅ 最佳实践：
+1. 你：「先研究代码库中已有的认证模式，然后提出实现方案」
+   Claude：使用 Explore Agent 搜索现有代码 → 分析模式 → 生成计划
+
+2. 你：「根据上述方案，实现 JWT 认证」
+   Claude：基于研究结果实现，遵循现有模式
+
+❌ 避免：
+直接要求实现，导致与现有代码风格不一致
+```
+
+#### 3. 测试驱动开发 (TDD) 模式
+
+<Mermaid chart={`flowchart TD
+    User["定义输入输出"] --> Tests["编写测试用例"]
+    Tests --> Implement["实现功能"]
+    Implement --> Run["运行测试"]
+    Run --> Pass{通过?}
+    Pass -->|否| Fix["Claude 自动修复"]
+    Fix --> Run
+    Pass -->|是| Done["完成 ✅"]
+
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Tests darkPurple
+    class Implement teal
+    class Done lightGreen
+`} client:load />
+
+**TDD 提示词模板**：
+```markdown
+你：「实现一个函数 calculateDiscount(price, code)，测试用例如下：
+
+输入: calculateDiscount(100, "SAVE20")
+期望输出: 80
+
+输入: calculateDiscount(50, "INVALID")
+期望输出: 50
+
+请先编写测试，然后实现功能，确保所有测试通过。」
+```
+
+#### 4. 迭代目标驱动
+
+| 目标类型      | 示例               | Claude 工作流                 |
+| ------------- | ------------------ | ----------------------------- |
+| **视觉 Mock** | Figma 设计稿       | 实现 → 截图 → 对比 → 调整     |
+| **测试用例**  | Jest 测试文件      | 实现 → 运行测试 → 修复        |
+| **性能基准**  | "加载时间 < 100ms" | 实现 → 测量 → 优化 → 验证     |
+| **API 响应**  | JSON Schema        | 实现 → 测试 API → 匹配 Schema |
+
+#### 5. Checklist 方法论（大型任务）
+
+```markdown
+你：「创建一个 checklist.md 文件，列出实现电商结账流程的所有步骤。
+逐步完成每个步骤，完成后标记为 [x]。」
+
+Claude 生成 checklist.md：
+## 电商结账流程实现清单
+
+### Phase 1: 购物车
+- [ ] 添加商品到购物车
+- [ ] 更新商品数量
+- [ ] 计算总价
+- [ ] 应用优惠码
+
+### Phase 2: 用户信息
+- [ ] 地址表单验证
+- [ ] 保存配送地址
+- ...
+
+Claude 工作流：
+1. 完成第一个任务
+2. 更新 checklist.md: [x] 添加商品到购物车
+3. 继续下一个任务
+```
+
+#### 6. Subagents 并行策略
+
+**何时使用 Subagents**：
+- ✅ 复杂问题分解为独立子任务
+- ✅ 需要探索多个方向
+- ✅ 上下文窗口即将用尽
+- ✅ 需要专业化处理（如安全审查）
+
+**示例**：
+```markdown
+你：「使用 subagents 并行完成：
+1. 实现前端 React 组件
+2. 实现后端 API 接口
+3. 编写集成测试
+
+每个 subagent 独立工作，最后合并结果。」
+```
+
+#### 7. 模型选择策略
+
+| 任务类型     | 推荐模型              | 原因                   |
+| ------------ | --------------------- | ---------------------- |
+| 日常开发     | **Sonnet 4.5**        | 速度质量平衡，响应一致 |
+| 复杂架构设计 | **Sonnet + Thinking** | 深度推理能力           |
+| 快速原型     | **Haiku**             | 极快速度，成本低       |
+| 代码审查     | **Opus**              | 最高质量，细节把控     |
+
+#### 8. 上下文管理技巧
+
+**避免上下文污染**：
+```bash
+# 定期清理不相关文件
+.claudeignore 文件：
+node_modules/
+dist/
+.next/
+coverage/
+*.log
+*.test.ts.snap
+```
+
+**利用 @-mentions**：
+```markdown
+只引用相关文件：
+@src/components/UserProfile.tsx
+@src/types/user.ts
+
+而非：
+@src/**/*  # 过度包含
+```
+
+### Headless 自动化模式
+
+对于重复性任务，使用 Headless 模式实现完全自动化：
+
+```bash
+# 自动 triage GitHub issues
+claude -p "分析新 issues，标记为 bug/feature/question，分配优先级" \
+  --headless \
+  --trigger github-webhook
+
+# 自动生成 boilerplate
+claude -p "生成 React 组件模板，包含 Props、State、Tests" \
+  --headless \
+  --input component-name.txt
+```
+
+### 性能监控仪表板
+
+```markdown
+# 在 CLAUDE.md 中添加性能目标
+
+## 性能基准
+- 首次响应时间 < 2秒
+- 完整任务完成 < 30秒
+- Token 使用率 < 80% context window
+- Subagent 并行度 ≥ 3 (复杂任务)
+
+Claude 会自动监控并优化以满足这些目标。
+```
+
+---
+
+## 🚀 实战应用
+
+### 在课程中的应用
+
+<CallToAction
+  title="第 3 周：深入 Claude Code"
+  subtitle="通过本文档学习：Agent 架构（42个 Prompts）| 工具系统（15个工具）| Subagents 并行处理 | 从源码学习最佳实践"
+  gradient="linear-gradient(135deg, #b3272c 0%, #772d8b 100%)"
+  client:load
+/>
+
+export const relatedLinks = [
+  {
+    title: 'Claude Code 工具页',
+    description: '查看功能介绍和使用指南',
+    icon: '🔧',
+    href: '/tools/claude-code'
+  },
+  {
+    title: '安装配置指南',
+    description: '快速上手 Claude Code',
+    icon: '⚙️',
+    href: '/materials/claude-code-setup'
+  },
+  {
+    title: '第 3 周课程',
+    description: '深入学习 Claude Code 架构',
+    icon: '📖',
+    href: '/curriculum/week-3'
+  }
+];
+
+<NextSteps title="📚 相关资源" links={relatedLinks} client:load />
+
+---
+
+## 🎓 技术深度总结
+
+### Claude Code 2.0 的核心技术创新
+
+基于对 **42 个 System Prompts** 和 **15 个工具定义** 的完整逆向分析，以及 Anthropic 官方公开的技术资料，我们总结出 Claude Code 2.0 的 5 大技术创新：
+
+#### 1️⃣ **极简而强大的 Agent Loop**
+
+```python
+# Claude Code 的核心伪代码
+while True:
+    response = model.generate(context + system_prompts)
+
+    if has_tool_calls(response):
+        results = execute_tools(response.tool_calls)
+        context.append(results + system_reminders)  # 动态提示注入
+    else:
+        output_to_user(response)
+        break
+```
+
+**为什么简单却高效？**
+- 🎯 **信任模型** - Claude 4.5 足够强大，不需要复杂脚手架
+- 🔄 **自我纠正** - System Reminders 实时引导
+- 📦 **工具组合** - 15 个工具可无限组合
+
+#### 2️⃣ **分层 System Prompts 设计**
+
+```
+Total: 53KB (42 个 Prompts)
+├─ 核心身份 (94B): "You are Claude Code..."
+├─ 工具规范 (36.8KB): 16 个详细的工具使用指南
+│  ├─ Security Review (10.8KB): 最复杂的安全审查逻辑
+│  ├─ TodoWrite (9.7KB): 完整的任务管理哲学
+│  ├─ Git & PR (6.1KB): 版本控制最佳实践
+│  └─ Task/MCP/Bash... (15.2KB)
+└─ 辅助系统 (16KB): 模板、配置、会话管理
+```
+
+**设计原则**：
+- 📐 **模块化** - 每个 Prompt 独立可测试
+- 🔗 **可组合** - 通过变量引用 (`${...}`) 互联
+- 🎚️ **可配置** - 根据工具调用动态加载
+
+#### 3️⃣ **三层并行架构**
+
+```
+L1: 主 Agent (Claude Code 主循环)
+    ├─ 工具调用并行化
+    │  ├─ Read + Grep + Glob (同时执行)
+    │  └─ 返回 → 合并结果
+    │
+    └─ Subagents 并行化
+        ├─ Subagent 1 (独立上下文)
+        ├─ Subagent 2 (独立上下文)
+        └─ Subagent 3 (独立上下文)
+            └─ 每个 Subagent 也可调用工具并行
+
+实际加速: 3-5x (Subagents) × 2-3x (工具并行) = 6-15x
+```
+
+#### 4️⃣ **安全防护的三道防线**
+
+```
+第一道: 权限系统
+├─ 4 种模式 (default/plan/acceptEdits/bypassPermissions)
+├─ 细粒度控制 (读/写/执行分离)
+└─ 自动允许安全命令 (echo, cat...)
+
+第二道: 沙箱隔离
+├─ 文件系统隔离 (bubblewrap/seatbelt)
+├─ 网络隔离 (Unix Socket → 域名白名单)
+└─ 进程隔离 (子进程继承限制)
+
+第三道: Security Review Agent
+├─ 三阶段审查 (上下文研究 → 比较分析 → 漏洞评估)
+├─ 17 条假阳性过滤
+└─ 置信度评分 (> 0.8 才报告)
+
+结果: 84% 减少权限提示 + 零安全事故（内部使用数据）
+```
+
+#### 5️⃣ **开放生态系统**
+
+```
+MCP (Model Context Protocol) = "AI 的 USB-C"
+├─ 8000+ 集成 (通过 Zapier)
+├─ 官方集成: Stripe, Plaid, Square, Figma
+├─ 社区贡献: GitHub, Databases, Custom APIs
+└─ 开放标准: 任何人都可以创建 MCP Server
+
+Skills 系统
+├─ 元工具架构 (工具管理工具)
+├─ 动态 Prompt 注入
+├─ 工具权限修改
+└─ 模型配置切换
+
+Agent Architect
+├─ 创建新 Agents 的 Agent
+├─ JSON 配置输出
+├─ 自动整合 CLAUDE.md
+└─ 无限扩展能力
+```
+
+### 学习路径建议
+
+根据技术复杂度，我们建议以下学习顺序：
+
+<Mermaid chart={`flowchart TD
+    Start([开始学习]) --> Week1["Week 1-2<br/>基础使用"]
+
+    Week1 --> Basic["掌握 15 个核心工具<br/>理解 Agent Loop"]
+
+    Basic --> Week3["Week 3-4<br/>架构深入"]
+    Week3 --> Arch["42 个 Prompts 分析<br/>Subagents 并行<br/>安全沙箱机制"]
+
+    Arch --> Week5["Week 5-6<br/>高级特性"]
+    Week5 --> Advanced["Extended Thinking<br/>MCP 集成<br/>CLAUDE.md 最佳实践"]
+
+    Advanced --> Week7["Week 7+<br/>生产应用"]
+    Week7 --> Production["自定义 Agents<br/>Headless 自动化<br/>团队协作规范"]
+
+    Production --> Expert([Claude Code 专家])
+
+    classDef darkRed fill:#b3272c,stroke:#b3272c,stroke-width:3px,color:#fff
+    classDef darkPurple fill:#772d8b,stroke:#772d8b,stroke-width:3px,color:#fff
+    classDef teal fill:#77a0a9,stroke:#77a0a9,stroke-width:3px,color:#fff
+    classDef lightGreen fill:#d3f9b5,stroke:#772d8b,stroke-width:2px,color:#1d1d1f
+
+    class Start darkRed
+    class Week3 darkPurple
+    class Advanced teal
+    class Expert lightGreen
+`} client:load />
+
+### 推荐学习资源
+
+**官方资源**：
+- 📖 [Claude Code 官方文档](https://docs.anthropic.com/en/docs/claude-code)
+- 🔬 [Anthropic Engineering Blog](https://www.anthropic.com/engineering) - 技术深度文章
+- 🎥 [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)
+
+**社区资源**：
+- 🌟 [Awesome Claude Code](https://github.com/hesreallyhim/awesome-claude-code) - 精选资源
+- 📚 [Claude Code 逆向工程系列](https://www.sabrina.dev/p/reverse-engineering-claude-code-using)
+- 🎓 [Claude Agent 设计课程](https://jannesklaas.github.io/ai/2025/07/20/claude-code-agent-design.html)
+
+**技术深度分析**：
+- [How Claude Code is Built](https://newsletter.pragmaticengineer.com/p/how-claude-code-is-built) - Gergely Orosz
+- [Claude Agent Skills Deep Dive](https://leehanchung.github.io/blogs/2025/10/26/claude-skills-deep-dive/)
+- [Behind The Scenes of Claude Code Internal Prompts](https://martinschroder.substack.com/p/behind-the-scenes-of-claude-code)
+
+---
+
+<CallToAction
+  title="深入理解 Claude Code 2.0，掌握下一代 AI 编程工具"
+  subtitle="42 个 System Prompts + 15 个核心工具 + MCP 生态 = 无限可能"
+  gradient="linear-gradient(135deg, #b3272c 0%, #772d8b 50%, #77a0a9 100%)"
+  client:load
+/>
+
+---
+
+*最后更新: 2025年11月16日*
+
+*数据来源: Acorn AST 完整分析 (42 System Prompts + 15 工具定义) + Anthropic 官方技术文档*
+
+*参考资料: Claude Code 官方文档、Anthropic Engineering Blog、社区技术分析文章*

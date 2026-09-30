@@ -1,0 +1,152 @@
+---
+layout: ../../layouts/PresentationLayout.astro
+title: AI 编程：从码农到筑梦师的航海图
+description: 训练营 Q&A 第二期 - 一场从代码到架构的范式转移
+category: Q&A 答疑
+---
+
+import PresentationCarousel from '../../components/presentations/PresentationCarousel';
+import { getUrl } from '../../utils/url';
+
+# AI 编程：从码农到筑梦师的航海图
+
+这是训练营 Q&A 第二期的内容，通过航海隐喻探讨 AI 时代编程范式的转变。从「码农」到「筑梦师」，我们的角色正在从划桨手转变为领航员。
+
+<PresentationCarousel
+  client:load
+  title="AI 编程：从码农到筑梦师的航海图"
+  slides={[
+    {
+      image: "/slides/qa-2/001.jpg",
+      alt: "封面：AI 编程 - 从码农到筑梦师的航海图",
+      caption: "一场从代码到架构的范式转移，踏上 AI 编程的航海之旅"
+    },
+    {
+      image: "/slides/qa-2/002.jpg",
+      alt: "旧世界的法则：代码正在变得廉价",
+      caption: "代码已经变成廉价品，我们的焦点必须从生产代码转向创造价值"
+    },
+    {
+      image: "/slides/qa-2/003.jpg",
+      alt: "新大陆的召唤：唯一的航标是思维的转变",
+      caption: "课程的核心价值不在于 Prompt 的复杂度，而在于思维模式的转变（Paradigm Shift）"
+    },
+    {
+      image: "/slides/qa-2/004.jpg",
+      alt: "我们的新使命：不再是划桨手，而是领航员",
+      caption: "过去我们的价值在于「如何写代码」，现在和未来，我们的价值在于「如何设计系统、如何指挥 AI、以及如何验证结果」"
+    },
+    {
+      image: "/slides/qa-2/005.jpg",
+      alt: "航行的第一法则：先有海图，再有航行",
+      caption: "强调 Spec-driven 的绝对重要性。清晰的 Spec 就是我们与 AI 协作的共同语言和契约"
+    },
+    {
+      image: "/slides/qa-2/006.jpg",
+      alt: "船长的两件法宝：宪章是北极星，计划是航海日志",
+      caption: "宪章（Constitution）是项目的「紧箍咒」和北极星；计划（Plan）是完成当前任务的「施工图」"
+    },
+    {
+      image: "/slides/qa-2/007.jpg",
+      alt: "与 AI 船员的沟通艺术：激发智慧，而非束缚手脚",
+      caption: "像与一位聪明的「大副」结对编程，允许并鼓励它提出设计问题。好的规则是约束行为边界，而不是替代判断"
+    },
+    {
+      image: "/slides/qa-2/008.jpg",
+      alt: "获得鹰眼洞察：借助 AI 看透源码的洋流",
+      caption: "我们仍需具备理解代码的能力，但目标已变为「如何在 AI 的加持下，更高效地读懂源码」"
+    },
+    {
+      image: "/slides/qa-2/009.jpg",
+      alt: "挑战一：遭遇迷雾群岛（过时的知识库）",
+      caption: "当 AI 对新的 Library 不了解时，将相关源码路径提供给模型，关键是为 AI 提供准确的上下文"
+    },
+    {
+      image: "/slides/qa-2/010.jpg",
+      alt: "挑战二：探索遗迹群岛（迭代老旧项目）",
+      caption: "遵守「先理解，后建造」的原则。首先让 AI 了解现状，撰写文档和单元测试，确保旧功能正常，然后再开始添加新功能"
+    },
+    {
+      image: "/slides/qa-2/011.jpg",
+      alt: "挑战三：指挥协同舰队（多 Agent 协作）",
+      caption: "关键不在于 Agent 的数量或分工，而在于是否有一个统一的 Spec 来约束所有 Agent 的行为"
+    },
+    {
+      image: "/slides/qa-2/012.jpg",
+      alt: "挑战四：船长的决断（人机边界）",
+      caption: "从三个维度判断：上下文（任务所需信息是否完备）、风险（AI 搞砸的成本有多大）、验证成本（检查 AI 答案是否比自己做更难）"
+    },
+    {
+      image: "/slides/qa-2/013.jpg",
+      alt: "挑战五：警惕无形之敌（安全漏洞与坏味道）",
+      caption: "定期用 AI 审查 AI。创建一个专门的「审查 Agent」或使用特定的 Skill 来扫描代码，寻找重复、耦合和已知的安全模式"
+    },
+    {
+      image: "/slides/qa-2/014.jpg",
+      alt: "挑战六：告别感觉式漂流（新手的学习路径）",
+      caption: "成长四步：建立架构认知、掌握精准表达、学会验收成果、了解基本工具"
+    },
+    {
+      image: "/slides/qa-2/015.jpg",
+      alt: "新世界的手感：失去手摇曲柄的触感，获得驾驭星辰大海的能力",
+      caption: "学习新语言（如 Rust）可能会欠缺一些亲力亲为的「手感」，但获得了前所未有的广度，以及使用 AI 解决更深层次问题的能力"
+    },
+    {
+      image: "/slides/qa-2/016.jpg",
+      alt: "学习的新范式：真正的能力是驾驭 AI 去学习任何事",
+      caption: "具体语言（如 Rust）本身不再是核心，重要的是培养一种元能力：当遇到任何未知知识点时，都能通过 AI 工具高效地学习"
+    },
+    {
+      image: "/slides/qa-2/017.jpg",
+      alt: "师者传道：给你鱼、给你渔、还是给你整个渔场",
+      caption: "代码是鱼，文档是渔具，而思维模式是理解整个渔场，从而在任何地方都能成功"
+    },
+    {
+      image: "/slides/qa-2/018.jpg",
+      alt: "新时代领航员的信条",
+      caption: "设计优于编码（Design over Code）、规范引领协作（Spec over Prompt）、提问重于解答（Question over Answer）、驾驭高于掌握（Mastery over Proficiency）"
+    },
+    {
+      image: "/slides/qa-2/019.jpg",
+      alt: "新的航行，才刚刚开始",
+      caption: "抵达彼岸不是终点，而是新航行的起点。掌握 AI 编程范式，意味着我们获得了探索更广阔、更未知世界的船票"
+    },
+    {
+      image: "/slides/qa-2/020.jpg",
+      alt: "领航员的日志，现在交给你",
+      caption: "这份航海图记录了我们穿越范式转移风暴的初步探索。现在，轮到你去绘制属于你自己的、更壮丽的篇章"
+    }
+  ]}
+/>
+
+## 核心要点
+
+### 范式转变
+- **从码农到筑梦师**：我们的角色从「划桨手」转变为「领航员」
+- **代码正在贬值**：焦点必须从生产代码转向创造价值
+- **思维模式是关键**：课程的核心价值在于 Paradigm Shift
+
+### 航行法则
+- **Spec-driven 开发**：先有海图（Spec），再有航行（Code）
+- **宪章与计划**：Constitution 是北极星，Plan 是航海日志
+- **与 AI 协作**：激发智慧，而非束缚手脚
+
+### 六大挑战
+1. **迷雾群岛**：处理 AI 不了解的新 Library
+2. **遗迹群岛**：迭代老旧项目，先理解后建造
+3. **协同舰队**：多 Agent 协作需要统一的 Spec
+4. **船长的决断**：判断人机边界的三个维度
+5. **无形之敌**：用 AI 审查 AI，识别安全漏洞
+6. **感觉式漂流**：新手学习路径的四个步骤
+
+### 新时代信条
+- 设计优于编码（Design over Code）
+- 规范引领协作（Spec over Prompt）
+- 提问重于解答（Question over Answer）
+- 驾驭高于掌握（Mastery over Proficiency）
+
+## 延伸阅读
+
+- [查看课程大纲](/curriculum) - 了解 AI 编程训练营完整内容
+- [探索工具生态](/tools) - 学习 AI 编程工具的使用
+- [浏览学习资料](/materials) - 获取更多技术学习资源

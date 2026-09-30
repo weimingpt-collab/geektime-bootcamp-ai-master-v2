@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(uv --directory E:vs_codeinggeektime-bootcamp-ai-master-v2w5pg-mcp run python -c \"import pg_mcp; print\\(''''module OK''''\\)\")",
+      "mcp__pg-mcp__query",
+      "Bash(uv run python -c \":*)",
+      "Bash(uv run:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [
+    "pg-mcp"
+  ]
+}

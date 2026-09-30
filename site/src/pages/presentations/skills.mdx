@@ -1,0 +1,145 @@
+---
+layout: ../../layouts/PresentationLayout.astro
+title: 别再构建智能体了，我们来构建技能吧
+description: 一种全新的范式，将智能体的通用能力转化为可组合、可分享的专业知识
+category: 技术分享
+---
+
+import PresentationCarousel from '../../components/presentations/PresentationCarousel';
+import { getUrl } from '../../utils/url';
+
+# 别再构建智能体了，我们来构建技能吧
+
+这是一份关于 Claude Code Skills 的深度解读，介绍了一种全新的范式：将智能体的通用能力转化为可组合、可分享的专业知识。技能（Skills）就是文件夹，这种简单性是刻意为之的设计。
+
+<PresentationCarousel
+  client:load
+  title="别再构建智能体了，我们来构建技能吧"
+  slides={[
+    {
+      image: "/slides/skills/001.jpg",
+      alt: "封面：别再构建智能体了，我们来构建技能吧",
+      caption: "一种全新的范式，将智能体的通用能力转化为可组合、可分享的专业知识"
+    },
+    {
+      image: "/slides/skills/002.jpg",
+      alt: "如今的智能体很聪明，但它们不是专家",
+      caption: "智能体无法很好地吸收专业知识，不会随时间学习，每次任务都从零开始"
+    },
+    {
+      image: "/slides/skills/003.jpg",
+      alt: "你会雇谁来帮你报税？",
+      caption: "对于需要专业知识的任务，我们需要的是可靠的执行，而不是从零开始的探索"
+    },
+    {
+      image: "/slides/skills/004.jpg",
+      alt: "我们的顿悟：代码是通往数字世界的通用接口",
+      caption: "一个强大的代码执行环境（仅包含 Bash 和文件系统）就足以成为通用智能体的核心"
+    },
+    {
+      image: "/slides/skills/005.jpg",
+      alt: "我们的解决方案：技能（Skills）",
+      caption: "技能是打包了可组合的程序性知识的、整理有序的文件集合——它们就是文件夹"
+    },
+    {
+      image: "/slides/skills/006.jpg",
+      alt: "一个「技能包」里有什么？",
+      caption: "skill.md 核心蓝图、脚本工具（Python/Bash）、以及其他相关资产文件"
+    },
+    {
+      image: "/slides/skills/007.jpg",
+      alt: "作为工具的脚本：更优越的范式",
+      caption: "脚本相比传统工具具有自文档化、可修改、按需加载的优势"
+    },
+    {
+      image: "/slides/skills/008.jpg",
+      alt: "保护上下文窗口：技能的渐进式披露",
+      caption: "通过 Progressive Disclosure，模型默认只看到元数据，使用时才读取详细指令"
+    },
+    {
+      image: "/slides/skills/009.jpg",
+      alt: "一个快速成长的技能生态系统正在涌现",
+      caption: "自发布以来，这个简单的设计已经催生了数千个技能，形成繁荣的生态"
+    },
+    {
+      image: "/slides/skills/010.jpg",
+      alt: "生态系统的三个层次",
+      caption: "基础技能（Foundational）、第三方技能（Third-Party）、企业技能（Enterprise）"
+    },
+    {
+      image: "/slides/skills/011.jpg",
+      alt: "最令人兴奋的趋势：人人都能构建技能",
+      caption: "越来越多非技术背景的人员正在构建技能，让非编程人员也能扩展 AI 能力"
+    },
+    {
+      image: "/slides/skills/012.jpg",
+      alt: "这一切如何融入新兴的通用智能体架构",
+      caption: "技能库（Skill Library）+ 智能体循环（Agent Loop）+ MCP 服务器的协同工作"
+    },
+    {
+      image: "/slides/skills/013.jpg",
+      alt: "技能与 MCP 协同工作：专业知识与外部连接的结合",
+      caption: "MCP 提供外部连接（数据和工具），技能提供如何利用这些连接的专业知识"
+    },
+    {
+      image: "/slides/skills/014.jpg",
+      alt: "技能的未来：像对待软件一样对待它们",
+      caption: "测试与评估、版本控制、依赖管理——技能需要更成熟的工具和实践"
+    },
+    {
+      image: "/slides/skills/015.jpg",
+      alt: "终极愿景：一个不断进化的集体知识库",
+      caption: "组织内部由人类和智能体共同策划、不断演进的能力知识库"
+    },
+    {
+      image: "/slides/skills/016.jpg",
+      alt: "最强大的一步：当 Claude 开始为自己创造技能",
+      caption: "通过「技能创造者技能」（Skill Creator Skill），Claude 可以即时获取新能力"
+    },
+    {
+      image: "/slides/skills/017.jpg",
+      alt: "新的计算堆栈：一个类比",
+      caption: "技能 = 应用程序，运行时 = 操作系统，模型 = 处理器"
+    },
+    {
+      image: "/slides/skills/018.jpg",
+      alt: "是时候停止重复构建智能体，并开始构建技能了",
+      caption: "技能只是一个起点，我们正在为每个人开启一个全新的创造层"
+    }
+  ]}
+/>
+
+## 核心要点
+
+### 为什么需要技能？
+- **智能体的局限**：当前智能体虽然聪明，但缺乏领域专业知识，无法随时间积累学习
+- **核心洞见**：代码是通往数字世界的通用接口，一个代码执行环境就足以成为通用智能体的核心
+
+### 什么是技能？
+- **简单定义**：技能就是文件夹，包含 `skill.md`（核心蓝图）、脚本工具和相关资产
+- **设计哲学**：简单性是刻意为之，任何人都能创建和分享技能
+
+### 技能的优势
+- **渐进式披露**：通过 Progressive Disclosure 保护上下文窗口
+- **可组合性**：技能可以组合、分享、版本控制
+- **普惠性**：非技术人员也能构建和使用技能
+
+### 技能生态系统
+- **基础技能**：赋予智能体新能力的通用技能
+- **第三方技能**：生态伙伴构建的产品技能
+- **企业技能**：为特定流程和内部软件构建的技能
+
+### 技能与 MCP 的关系
+- **MCP**：提供与外部世界的连接（数据和工具）
+- **技能**：提供如何利用这些连接的专业知识和操作流程
+
+### 未来展望
+- **自我进化**：Claude 可以通过「技能创造者技能」为自己创建新技能
+- **集体知识库**：组织内部由人类和 AI 共同策划的不断演进的能力库
+- **新计算堆栈**：技能 = Apps，运行时 = OS，模型 = Processors
+
+## 延伸阅读
+
+- [查看课程大纲](/curriculum) - 了解 AI 编程训练营完整内容
+- [探索工具生态](/tools) - 学习 AI 编程工具的使用
+- [浏览学习资料](/materials) - 获取更多技术学习资源

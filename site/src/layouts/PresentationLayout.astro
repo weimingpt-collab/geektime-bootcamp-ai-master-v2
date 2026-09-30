@@ -1,0 +1,53 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Navigation from "../components/layout/Navigation";
+import Footer from "../components/layout/Footer";
+import "../styles/presentations.css";
+import { getUrl } from "../utils/url";
+
+interface Props {
+  title?: string;
+  description?: string;
+  category?: string;
+}
+
+const { title, description, category } = Astro.props;
+---
+
+<BaseLayout title={title} description={description}>
+  <Navigation client:load />
+  <main
+    style="padding-top: var(--header-desktop); background-color: var(--md-cream);"
+  >
+    {
+      category && (
+        <div
+          class="border-b-2 border-graphite"
+          style="background-color: var(--md-cloud);"
+        >
+          <div
+            class="md-container"
+            style="padding-top: var(--space-5); padding-bottom: var(--space-5);"
+          >
+            <div class="flex gap-3 items-center text-body">
+              <a href={getUrl("presentations")} class="text-sky hover:underline">
+                演示文稿
+              </a>
+              <span class="text-slate">/</span>
+              <span class="text-slate">{category}</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    <div
+      class="md-container"
+      style="padding-top: var(--space-12); padding-bottom: var(--space-12);"
+    >
+      <div class="mx-auto prose prose-lg prose-slate mdx-content">
+        <slot />
+      </div>
+    </div>
+  </main>
+  <Footer client:load />
+</BaseLayout>

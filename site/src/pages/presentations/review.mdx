@@ -1,0 +1,141 @@
+---
+layout: ../../layouts/PresentationLayout.astro
+title: AI 编程新范式
+description: AI 编程训练营 8 周课程回顾 - 从工具入门到 Agentic 开发的完整学习之旅
+category: 学习总结
+---
+
+import PresentationCarousel from '../../components/presentations/PresentationCarousel';
+import { getUrl } from '../../utils/url';
+
+# AI 编程新范式
+
+这是 AI 编程训练营 8 周课程的完整回顾，从 AI 编码工具入门到深度 Agentic 开发，涵盖了 Vibe Coding 理念、人机协作模式、以及 AI 时代开发者的职业发展建议。
+
+<PresentationCarousel
+  client:load
+  title="AI 编程新范式"
+  slides={[
+    {
+      image: "/slides/review/00.jpg",
+      alt: "第一周：AI 编码新范式 - 工具启蒙与快速实践",
+      caption: "第一周聚焦 AI 编码工具全貌，涵盖 Cursor、Claude Code、NotebookLM，掌握 Gemini/OpenAI/Claude 核心基础与 API 接入"
+    },
+    {
+      image: "/slides/review/01.jpg",
+      alt: "第二周：深入 Cursor - 人机交互式智能编程",
+      caption: "深入 Cursor 的规划-设计-实现-回顾工作流，学习 Rules 设置、@文档集成、多模态交互与数据库查询工具"
+    },
+    {
+      image: "/slides/review/02.jpg",
+      alt: "深入 Claude Code：Agent 驱动的自动化开发",
+      caption: "精通 Claude Code 高级功能，理解 AI Agent 工作原理，实践任务分解、Agent 协作、代码审查与 API 文档生成"
+    },
+    {
+      image: "/slides/review/03.jpg",
+      alt: "Spec Driven 关键流程",
+      caption: "从想法到产品的完整流程：LLM 交互生成需求 → Review → 需求定稿 → 设计文档 → 开发 → 测试 → PR → Merge"
+    },
+    {
+      image: "/slides/review/04.jpg",
+      alt: "第四周：AI 辅助编程深度实践",
+      caption: "结合 Codex、Autogen 等工具，深入学习 AI 辅助编程的时序图生成与系统架构设计"
+    },
+    {
+      image: "/slides/review/05.jpg",
+      alt: "第五周：深入学习和使用 MCP",
+      caption: "精通 MCP 协议原理，掌握架构角色，亲手构建包含 Shell 访问、文件处理、Postgres 数据库访问的 MCP Server"
+    },
+    {
+      image: "/slides/review/06.jpg",
+      alt: "第六周：Agent 核心原则与多智能体协作",
+      caption: "学习 Agent 核心原则、逆向工程与架构洞察，构建通用 Agent 核心与 Code Review Agent，探索 Multi-Agent 协作"
+    },
+    {
+      image: "/slides/review/07.jpg",
+      alt: "第七周：多智能体系统构建",
+      caption: "深入多智能体系统架构，从蓝图设计到协作编排，构建可扩展的 AI Agent 团队"
+    },
+    {
+      image: "/slides/review/08.jpg",
+      alt: "我的工作流：探讨问题 → 执行方案 → 清理收尾",
+      caption: "完整工作流：Pull branch → 设计文档 → 分阶段实现 → Codex Review → 手工验证 → 创建 PR → 合并清理"
+    },
+    {
+      image: "/slides/review/09.jpg",
+      alt: "提升个人的软件开发修为",
+      caption: "读好书读代码、保持好奇心多尝试、积累业界经验、AI 知识总结、框架跟风与理解实质、长久之道"
+    },
+    {
+      image: "/slides/review/10.jpg",
+      alt: "展望未来：AI 编程的发展方向",
+      caption: "从知识积累到远方的智慧城市，AI 编程正在开启软件开发的新纪元"
+    },
+    {
+      image: "/slides/review/11.jpg",
+      alt: "从传统编程到 Vibe Coding",
+      caption: "2025 Karpathy 提出 Vibe Coding：英语成为新的编程语言，从手动编码的繁琐转向以自然语言描述意图"
+    },
+    {
+      image: "/slides/review/12.jpg",
+      alt: "经济学驱动：沉没成本消解与快速迭代",
+      caption: "Vibe Coding 带来一次性软件与快速验证，Rapid Fail & Build 成为新常态，沉没成本不再是枷锁"
+    },
+    {
+      image: "/slides/review/13.jpg",
+      alt: "巨人的交锋：Linus Torvalds 与 Antirez 的深度思辨",
+      caption: "2026 理解人机协作边界：Linus 认为 AI 是新编译器，维护是噩梦；Antirez 强调人类必须在循环中保持架构控制"
+    },
+    {
+      image: "/slides/review/14.jpg",
+      alt: "智能体编排：未来的开发模式 (2026)",
+      caption: "从工具到队友：Replit Agent、Manus、Emergent 等虚拟团队，通过 Plan Mode 规划、自主执行、人工验收完成开发"
+    },
+    {
+      image: "/slides/review/15.jpg",
+      alt: "人类与智能体的协作",
+      caption: "人与 Agent 从驾驶员到调度员，代码审查的危机与 Agentic PR，开发者与用户界限的模糊，Shadow IT 的兴起"
+    },
+    {
+      image: "/slides/review/16.jpg",
+      alt: "未来的 User Interface：生成式与环境计算",
+      caption: "Generative UI 实现界面即时演算，Ambient AI 让界面消失，从 Vercel v0 到无感交互的程序员绩师"
+    },
+    {
+      image: "/slides/review/17.jpg",
+      alt: "职业建议：在 AI 时代生存与进阶",
+      caption: "资深开发者转型 AI 编排架构师，专注系统架构与规格定义；初级开发者警惕学习陷阱，把 AI 当导师而非写手"
+    },
+    {
+      image: "/slides/review/18.jpg",
+      alt: "人机共生的新契约",
+      caption: "2026 年软件开发进化：Vibe Coding 以思维速度构建软件，「理解」比「知道」更重要，「判断」比「执行」更关键"
+    }
+  ]}
+/>
+
+## 核心要点
+
+### 8 周课程精华
+
+1. **第一周**：AI 编码工具全貌 - Cursor、Claude Code、NotebookLM 入门，掌握 API 接入基础
+2. **第二周**：深入 Cursor - 人机交互式智能编程，Rules 设置与多模态交互
+3. **第三周**：Claude Code Agent 驱动开发 - 任务分解、协作与代码审查
+4. **第四周**：Spec Driven 开发流程 - 从想法到产品的完整工作流
+5. **第五周**：MCP 协议深入 - 构建自定义 MCP Server
+6. **第六周**：Agent 核心原则 - 逆向工程与 Multi-Agent 协作
+7. **第七周**：多智能体系统 - 架构设计与团队编排
+8. **第八周**：未来展望 - Vibe Coding、人机协作与职业发展
+
+### AI 时代开发者的关键洞察
+
+- **Vibe Coding** - 以自然语言描述意图，英语成为新的编程语言
+- **人机协作** - 从「驾驶员」转变为「调度员」，掌握指挥棒而非方向盘
+- **经济学驱动** - 沉没成本消解，快速失败快速构建成为新常态
+- **职业转型** - 资深开发者转向架构师，初级开发者以 AI 为导师
+
+## 延伸阅读
+
+- [查看课程大纲](/curriculum) - 了解 AI 编程训练营完整内容
+- [探索工具生态](/tools) - 学习 AI 编程工具的使用
+- [浏览学习资料](/materials) - 获取更多技术学习资源

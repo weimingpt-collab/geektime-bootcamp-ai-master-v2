@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(awk \"NR>=255 && NR<=262\" .env)"
+    ]
+  }
+}
